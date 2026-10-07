@@ -54,13 +54,6 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
-​<!-- شاشة تحميل مبدئية لمنع ومضة الشاشة الرئيسية عند الريفرش -->
-<div id="initial-loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
-<div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4 shadow-lg shadow-primary/40 animate-pulse">
-<i class="fa-solid fa-motorcycle text-4xl text-white"></i>
-</div>
-<p class="text-secondary font-bold text-lg">جاري التحميل...</p>
-</div>
 ​<!-- Toast Notification Container -->
 <div id="toast-container" class="fixed bottom-20 left-0 right-0 z-50 flex flex-col items-center pointer-events-none space-y-2"></div>
 ​<!-- نافذة تعديل تكلفة التوصيل (Modal) -->
@@ -80,7 +73,7 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </div>
 ​<div class="app-container">
 <!-- 1. شاشة اختيار الدور -->
-<div id="screen-role-select" class="hidden flex-col h-screen justify-center items-center p-6 bg-white">
+<div id="screen-role-select" class="flex flex-col h-screen justify-center items-center p-6 bg-white">
 <div class="w-32 h-32 bg-primary rounded-full flex items-center justify-center mb-8 shadow-lg shadow-primary/40">
 <i class="fa-solid fa-motorcycle text-6xl text-white"></i>
 </div>
@@ -367,18 +360,9 @@ appId: "1:386617344783:web:00917fae8b7c9704a3f47a"
 const auth = getAuth(app);
 const db = getFirestore(app);
 ​let usersCol, ordersCol;
-​function hideLoader() {
-const loader = document.getElementById('initial-loader');
-if(loader) loader.style.display = 'none';
-}
 ​async function initFirebase() {
 try {
 await signInAnonymously(auth);
-if(!auth.currentUser) {
-hideLoader();
-navTo('screen-role-select');
-return;
-}
 ​usersCol = collection(db, 'users');
 ordersCol = collection(db, 'orders');
 ​const savedUser = localStorage.getItem('wasel_user');
@@ -395,10 +379,8 @@ localStorage.setItem('wasel_user', JSON.stringify(updated));
 }
 }
 updateDynamicUI();
-hideLoader();
 }, (error) => {
 console.error("Users sync error:", error);
-hideLoader();
 });
 ​onSnapshot(ordersCol, (snapshot) => {
 state.orders = snapshot.docs.map(doc => ({
@@ -408,23 +390,18 @@ createdAt: doc.data().createdAt?.toDate() || new Date(),
 completedAt: doc.data().completedAt?.toDate() || null
 }));
 updateDynamicUI();
-hideLoader();
 }, (error) => {
 console.error("Orders sync error:", error);
-hideLoader();
 });
 ​if(state.currentUser) {
-hideLoader();
 if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
 else if(state.currentUser.role === 'driver') initDriverDashboard();
 else if(state.currentUser.role === 'admin') loginAsAdmin();
 } else {
-hideLoader();
 navTo('screen-role-select');
 }
 ​} catch (e) {
 console.error("Firebase Init Error:", e);
-hideLoader();
 navTo('screen-role-select');
 showToast('تأكد من تفعيل Authentication (Anonymous) في فايربيز', 'error');
 }
