@@ -37,13 +37,13 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <h1 class="text-3xl font-bold text-secondary mb-2">وصل دليفري</h1>
 <p class="text-gray-500 mb-10 text-center">المنصة الأسرع لربط المطاعم بمندوبي التوصيل</p>
 ​<div class="w-full space-y-4">
-<button onclick="window.navToLogin('restaurant')" class="w-full bg-secondary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 shadow-md cursor-pointer">
+<button type="button" onclick="window.navToLogin('restaurant')" class="w-full bg-secondary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 shadow-md cursor-pointer">
 <i class="fa-solid fa-store"></i> دخول كمطعم
 </button>
-<button onclick="window.navToLogin('driver')" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 shadow-md shadow-primary/30 cursor-pointer">
+<button type="button" onclick="window.navToLogin('driver')" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 shadow-md shadow-primary/30 cursor-pointer">
 <i class="fa-solid fa-helmet-safety"></i> دخول كمندوب
 </button>
-<button onclick="window.loginAsAdmin()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 mt-4 cursor-pointer">
+<button type="button" onclick="window.loginAsAdmin()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 mt-4 cursor-pointer">
 <i class="fa-solid fa-user-tie"></i> لوحة الإدارة
 </button>
 </div>
@@ -51,7 +51,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 ​<!-- 2. شاشة تسجيل الدخول -->
 <div id="screen-login" class="hidden flex-col h-screen bg-white">
 <div class="p-6">
-<button onclick="window.navTo('screen-role-select')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 active:scale-95 cursor-pointer">
+<button type="button" onclick="window.navTo('screen-role-select')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 active:scale-95 cursor-pointer">
 <i class="fa-solid fa-arrow-right"></i>
 </button>
 <h2 id="login-title" class="text-2xl font-bold text-secondary mb-6">تسجيل الدخول</h2>
@@ -64,9 +64,9 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
 <input type="password" id="login-password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary" placeholder="••••••••">
 </div>
-<button onclick="window.processLogin()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-primary/30 active:scale-95 transition cursor-pointer">دخول</button>
+<button type="button" onclick="window.processLogin()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-primary/30 active:scale-95 transition cursor-pointer">دخول</button>
 ​<div class="text-center mt-6">
-<p class="text-gray-500">ليس لديك حساب؟ <button onclick="window.toggleRegisterForm()" class="text-primary font-bold cursor-pointer">سجل الآن</button></p>
+<p class="text-gray-500">ليس لديك حساب؟ <button type="button" onclick="window.toggleRegisterForm()" class="text-primary font-bold cursor-pointer">سجل الآن</button></p>
 </div>
 </div>
 </div>
@@ -74,7 +74,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 ​<!-- 3. شاشة التسجيل -->
 <div id="screen-register" class="hidden flex-col h-screen bg-white overflow-y-auto">
 <div class="p-6 pb-20">
-<button onclick="window.toggleRegisterForm()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 active:scale-95 cursor-pointer">
+<button type="button" onclick="window.toggleRegisterForm()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 active:scale-95 cursor-pointer">
 <i class="fa-solid fa-arrow-right"></i>
 </button>
 <h2 id="register-title" class="text-2xl font-bold text-secondary mb-6">إنشاء حساب جديد</h2>
@@ -91,7 +91,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
 <input type="password" id="reg-password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3" placeholder="••••••••">
 </div>
-<button onclick="window.processRegister()" class="w-full bg-secondary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg active:scale-95 transition cursor-pointer">تسجيل وحفظ</button>
+<button type="button" onclick="window.processRegister()" class="w-full bg-secondary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg active:scale-95 transition cursor-pointer">تسجيل وحفظ</button>
 </div>
 </div>
 </div>
@@ -102,7 +102,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <h2 class="font-bold text-lg text-secondary" id="rest-header-name">مطعم</h2>
 <p class="text-xs text-gray-500">لوحة تحكم المطعم</p>
 </div>
-<button onclick="window.logout()" class="text-gray-400 hover:text-danger active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button type="button" onclick="window.logout()" class="text-gray-400 hover:text-danger active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 ​<div class="main-content bg-gray-100 p-4" id="rest-content">
 <div id="rest-tab-post" class="space-y-4">
@@ -119,7 +119,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <input type="number" id="order-price" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="200">
 </div>
 <div class="flex-1">
-<label class="block text-xs text-gray-500 mb-1">تكلفة التوصيل (ج.م)</label>
+<label class="block text-xs text-gray-500 mb-1">أجرة المندوب (ج.م)</label>
 <input type="number" id="delivery-fee" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="30">
 </div>
 </div>
@@ -127,20 +127,22 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <label class="block text-xs text-gray-500 mb-1">رقم هاتف العميل (للتواصل)</label>
 <input type="tel" id="customer-phone" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="01xxxxxxxxx">
 </div>
-<button onclick="window.postOrder()" class="w-full bg-primary text-white py-3 rounded-xl font-bold mt-4 shadow-md active:scale-95 transition cursor-pointer"><i class="fa-solid fa-paper-plane ml-1"></i> نشر الطلب الآن</button>
+<button type="button" onclick="window.postOrder()" class="w-full bg-primary text-white py-3 rounded-xl font-bold mt-4 shadow-md active:scale-95 transition cursor-pointer"><i class="fa-solid fa-paper-plane ml-1"></i> نشر الطلب الآن</button>
 </div>
 </div>
 </div>
 ​<div id="rest-tab-orders" class="hidden space-y-4">
 <h3 class="font-bold text-secondary border-b pb-2">طلباتي الحالية</h3>
-<div id="rest-orders-list" class="space-y-3">جاري التحميل...</div>
+<div id="rest-orders-list" class="space-y-3">
+<p class="text-center text-gray-400 py-10">جاري التحميل...</p>
+</div>
 </div>
 </div>
 ​<div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10">
-<button onclick="window.switchRestTab('post')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-post">
+<button type="button" onclick="window.switchRestTab('post')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-post">
 <i class="fa-solid fa-plus-circle text-xl mb-1"></i><span class="text-xs font-bold">إضافة طلب</span>
 </button>
-<button onclick="window.switchRestTab('orders')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-orders">
+<button type="button" onclick="window.switchRestTab('orders')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-orders">
 <i class="fa-solid fa-clipboard-list text-xl mb-1"></i><span class="text-xs font-bold">متابعة الطلبات</span>
 </button>
 </div>
@@ -152,15 +154,17 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <h2 class="font-bold text-sm text-secondary" id="driver-header-name">مندوب</h2>
 <p class="text-[11px] text-gray-500">لوحة تحكم المندوب</p>
 </div>
-<button onclick="window.logout()" class="text-gray-400 hover:text-danger active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button type="button" onclick="window.logout()" class="text-gray-400 hover:text-danger active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 ​<div class="main-content bg-gray-100 p-4" id="driver-content">
 <div id="driver-tab-feed" class="space-y-4">
 <div class="flex justify-between items-center mb-2">
 <h3 class="font-bold text-secondary">الطلبات المتاحة الآن</h3>
-<button onclick="window.refreshDriverFeed()" class="text-primary text-sm font-bold active:scale-95 cursor-pointer"><i class="fa-solid fa-rotate-right"></i> تحديث</button>
+<button type="button" onclick="window.refreshDriverFeed()" class="text-primary text-sm font-bold active:scale-95 cursor-pointer"><i class="fa-solid fa-rotate-right"></i> تحديث</button>
 </div>
-<div id="driver-feed-list" class="space-y-4">جاري التحميل...</div>
+<div id="driver-feed-list" class="space-y-4">
+<p class="text-center text-gray-400 py-10">جاري التحميل...</p>
+</div>
 </div>
 ​<div id="driver-tab-tasks" class="hidden space-y-4">
 <h3 class="font-bold text-secondary border-b pb-2">طلباتي النشطة والمكتملة</h3>
@@ -168,10 +172,10 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 </div>
 </div>
 ​<div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10">
-<button onclick="window.switchDriverTab('feed')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-driver-feed">
+<button type="button" onclick="window.switchDriverTab('feed')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-driver-feed">
 <i class="fa-solid fa-house text-xl mb-1"></i><span class="text-xs font-bold">الرئيسية</span>
 </button>
-<button onclick="window.switchDriverTab('tasks')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg relative transition cursor-pointer" id="btn-driver-tasks">
+<button type="button" onclick="window.switchDriverTab('tasks')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg relative transition cursor-pointer" id="btn-driver-tasks">
 <i class="fa-solid fa-motorcycle text-xl mb-1"></i><span class="text-xs font-bold">مشاويري</span>
 </button>
 </div>
@@ -180,7 +184,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <div id="screen-admin" class="hidden flex-col h-screen bg-gray-50">
 <div class="bg-secondary text-white px-4 py-4 flex justify-between items-center shadow-md z-10">
 <h2 class="font-bold text-lg"><i class="fa-solid fa-shield-halved ml-2 text-primary"></i>لوحة الإدارة</h2>
-<button onclick="window.logout()" class="text-gray-300 hover:text-white active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button type="button" onclick="window.logout()" class="text-gray-300 hover:text-white active:scale-95 cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 <div class="main-content p-4">
 <div class="grid grid-cols-2 gap-3 mb-6">
@@ -192,11 +196,11 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 </div>
 </div>
 </div>
-​<!-- الجزء الأول: عقل الواجهة (يعمل فوراً لضمان عمل الأزرار بدون أي تعليق) -->
+​<!-- الجزء الأول: عقل الواجهة (يعمل فوراً ويضمن استجابة الأزرار) -->
 <script>
-// تعريف الحالة العامة
+// المتغيرات العامة التي ستملؤها قاعدة البيانات لاحقاً
 window.appState = { currentUser: null, currentRoleSelecting: null, users: [], orders: [] };
-​// دوال التنقل (تعمل فوراً بمجرد النقر)
+​// 1. دوال التنقل بين الشاشات
 window.navTo = function(screenId) {
 const screens = ['screen-role-select', 'screen-login', 'screen-register', 'screen-restaurant', 'screen-driver', 'screen-admin'];
 screens.forEach(id => {
@@ -222,27 +226,8 @@ reg.classList.toggle('hidden'); reg.classList.toggle('flex');
 const regTitle = document.getElementById('register-title');
 if(regTitle) regTitle.innerText = window.appState.currentRoleSelecting === 'restaurant' ? 'تسجيل مطعم جديد' : 'تسجيل مندوب جديد';
 };
-​window.showToast = function(message, type = 'success') {
-const container = document.getElementById('toast-container');
-if(!container) return;
-const toast = document.createElement('div');
-toast.className = px-4 py-3 rounded-lg shadow-lg text-sm font-bold ${type === 'success' ? 'bg-secondary text-white' : 'bg-danger text-white'} toast-enter;
-toast.innerHTML = message;
-container.appendChild(toast);
-setTimeout(() => { toast.classList.remove('toast-enter'); setTimeout(() => toast.remove(), 3000); }, 100);
-};
-​window.logout = function() {
-window.appState.currentUser = null;
-localStorage.removeItem('wasel_user');
-window.navTo('screen-role-select');
-};
-​window.loginAsAdmin = function() {
-window.appState.currentUser = { role: 'admin', name: 'المدير' };
-localStorage.setItem('wasel_user', JSON.stringify(window.appState.currentUser));
-window.navTo('screen-admin');
-if(window.renderAdminDashboard) window.renderAdminDashboard();
-};
-​window.switchRestTab = function(tab) {
+​// 2. دوال التبويبات (Tabs)
+window.switchRestTab = function(tab) {
 document.getElementById('rest-tab-post').classList.toggle('hidden', tab !== 'post');
 document.getElementById('rest-tab-orders').classList.toggle('hidden', tab !== 'orders');
 document.getElementById('btn-rest-post').className = flex flex-col items-center p-2 w-1/2 rounded-lg transition cursor-pointer ${tab === 'post' ? 'text-primary' : 'text-gray-400'};
@@ -257,14 +242,36 @@ document.getElementById('btn-driver-tasks').className = flex flex-col items-cent
 if(tab === 'feed' && window.renderDriverFeed) window.renderDriverFeed();
 if(tab === 'tasks' && window.renderDriverTasks) window.renderDriverTasks();
 };
-​// دوال مؤقتة لتجنب رسائل الخطأ إذا ضغط المستخدم قبل اتصال قاعدة البيانات
-window.processLogin = function() { window.showToast('جاري إعداد الاتصال، يرجى المحاولة مرة أخرى...', 'error'); };
-window.processRegister = function() { window.showToast('جاري إعداد الاتصال، يرجى المحاولة مرة أخرى...', 'error'); };
-window.postOrder = function() { window.showToast('جاري إعداد الاتصال...', 'error'); };
-window.refreshDriverFeed = function() { window.showToast('جاري تحديث البيانات...'); };
+​// 3. دوال التنبيهات وإدارة الجلسة
+window.showToast = function(message, type = 'success') {
+const container = document.getElementById('toast-container');
+if(!container) return;
+const toast = document.createElement('div');
+toast.className = px-4 py-3 rounded-lg shadow-lg text-sm font-bold ${type === 'success' ? 'bg-secondary text-white' : 'bg-danger text-white'} toast-enter;
+toast.innerHTML = message;
+container.appendChild(toast);
+setTimeout(() => { toast.classList.remove('toast-enter'); setTimeout(() => toast.remove(), 3000); }, 100);
+};
+​window.logout = function() {
+window.appState.currentUser = null;
+localStorage.removeItem('wasel_user');
+window.navTo('screen-role-select');
+window.showToast('تم تسجيل الخروج');
+};
+​window.loginAsAdmin = function() {
+window.appState.currentUser = { role: 'admin', name: 'المدير' };
+localStorage.setItem('wasel_user', JSON.stringify(window.appState.currentUser));
+window.navTo('screen-admin');
+if(window.renderAdminDashboard) window.renderAdminDashboard();
+};
+​// 4. دوال الحماية المؤقتة (سيتم استبدالها لاحقاً ببيانات فايربيز)
+window.processLogin = function() { window.showToast('جاري الاتصال بقاعدة البيانات، لحظات...', 'error'); };
+window.processRegister = function() { window.showToast('جاري الاتصال بقاعدة البيانات، لحظات...', 'error'); };
+window.postOrder = function() { window.showToast('جاري الاتصال...', 'error'); };
+window.refreshDriverFeed = function() { window.showToast('جاري التحديث...'); if(window.renderDriverFeed) window.renderDriverFeed(); };
 window.driverAcceptOrder = function() {};
 window.driverCompleteOrder = function() {};
-​// التحقق من تسجيل الدخول السابق فوراً (لحل مشكلة الريفرش)
+​// 5. استعادة الجلسة فوراً (لمنع الخروج عند تحديث الصفحة)
 try {
 const savedUserStr = localStorage.getItem('wasel_user');
 if (savedUserStr) {
@@ -279,10 +286,16 @@ document.getElementById('driver-header-name').innerText = user.name;
 } else if(user.role === 'admin') {
 window.navTo('screen-admin');
 }
+} else {
+// إذا لم يكن هناك مستخدم مسجل، اظهر الشاشة الرئيسية
+window.navTo('screen-role-select');
 }
-} catch(e) { console.error("Error loading saved user"); }
+} catch(e) {
+console.error(e);
+window.navTo('screen-role-select');
+}
 </script>
-​<!-- الجزء الثاني: عقل البيانات (يعمل في الخلفية لاستيراد بيانات فايربيز) -->
+​<!-- الجزء الثاني: عقل البيانات (يعمل في الخلفية للاتصال بـ Firebase) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -300,27 +313,37 @@ appId: "1:386617344783:web:00917fae8b7c9704a3f47a"
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-​// تسجيل دخول مجهول لقاعدة البيانات
+​// تسجيل دخول مجهول للسماح بالقراءة والكتابة
 signInAnonymously(auth).catch(err => console.error("Auth error:", err));
 ​const usersCol = collection(db, 'users');
 const ordersCol = collection(db, 'orders');
-​// الاستماع الحي للمستخدمين
+​// جلب المستخدمين
 onSnapshot(usersCol, (snapshot) => {
 window.appState.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 });
-​// الاستماع الحي للطلبات وتحديث الشاشات
+​// جلب الطلبات لحظياً وتحديث الواجهات
 onSnapshot(ordersCol, (snapshot) => {
 window.appState.orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-if(!window.appState.currentUser) return;
-if(window.appState.currentUser.role === 'driver') { window.renderDriverFeed(); window.renderDriverTasks(); }
-else if(window.appState.currentUser.role === 'restaurant') { window.renderRestOrders(); }
-else if(window.appState.currentUser.role === 'admin') { window.renderAdminDashboard(); }
+​if(!window.appState.currentUser) return;
+​if(window.appState.currentUser.role === 'driver' && window.renderDriverFeed && window.renderDriverTasks) {
+window.renderDriverFeed();
+window.renderDriverTasks();
+}
+else if(window.appState.currentUser.role === 'restaurant' && window.renderRestOrders) {
+window.renderRestOrders();
+}
+else if(window.appState.currentUser.role === 'admin' && window.renderAdminDashboard) {
+window.renderAdminDashboard();
+}
 });
-​// --- الدوال الفعلية التي تتصل بقاعدة البيانات وتستبدل الدوال المؤقتة ---
+​// ==========================================
+// ربط الدوال الفعلية (استبدال الدوال المؤقتة)
+// ==========================================
 ​window.processLogin = function() {
 const phone = document.getElementById('login-phone').value;
 const pass = document.getElementById('login-password').value;
-if(phone === 'admin' && pass === 'admin') { window.loginAsAdmin(); return; }
+if(!phone || !pass) { window.showToast('أدخل البيانات', 'error'); return; }
+​if(phone === 'admin' && pass === 'admin') { window.loginAsAdmin(); return; }
 ​const user = window.appState.users.find(u => u.phone === phone && u.password === pass && u.role === window.appState.currentRoleSelecting);
 if(user) {
 window.appState.currentUser = user;
@@ -343,14 +366,18 @@ window.showToast('رقم الهاتف أو كلمة المرور غير صحيح
 const name = document.getElementById('reg-name').value;
 const phone = document.getElementById('reg-phone').value;
 const password = document.getElementById('reg-password').value;
-if(!name || !phone || !password) { window.showToast('يرجى ملء كافة الحقول', 'error'); return; }
+​if(!name || !phone || !password) { window.showToast('يرجى ملء كافة الحقول', 'error'); return; }
+​// التأكد من عدم تكرار رقم الهاتف
+if(window.appState.users.find(u => u.phone === phone)) {
+window.showToast('رقم الهاتف مسجل مسبقاً', 'error'); return;
+}
 ​try {
 await addDoc(usersCol, { role: window.appState.currentRoleSelecting, name, phone, password });
 window.showToast('تم الحفظ بنجاح! سجل دخولك الآن');
 window.toggleRegisterForm();
 } catch(e) { window.showToast('حدث خطأ في الاتصال بقاعدة البيانات', 'error'); }
 };
-​// دوال المطعم
+​// ---- دوال المطعم ----
 window.postOrder = async function() {
 const type = document.getElementById('order-type').value;
 const price = document.getElementById('order-price').value;
@@ -359,9 +386,14 @@ const phone = document.getElementById('customer-phone').value;
 ​if(!type || !price || !fee || !phone) { window.showToast('أكمل البيانات المطلوبة', 'error'); return; }
 ​try {
 await addDoc(ordersCol, {
-restaurantId: window.appState.currentUser.id, restaurantName: window.appState.currentUser.name,
-type, deliveryFee: fee, orderPrice: price, contactPhone: phone,
-status: 'pending', createdAt: new Date().toISOString()
+restaurantId: window.appState.currentUser.id,
+restaurantName: window.appState.currentUser.name,
+type,
+deliveryFee: fee,
+orderPrice: price,
+contactPhone: phone,
+status: 'pending',
+createdAt: new Date().toISOString()
 });
 ​document.getElementById('order-type').value = '';
 document.getElementById('order-price').value = '';
@@ -375,50 +407,48 @@ window.switchRestTab('orders');
 const list = document.getElementById('rest-orders-list');
 if(!list) return;
 const myOrders = window.appState.orders.filter(o => o.restaurantId === window.appState.currentUser.id);
-if(myOrders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات</p>'; return; }
+if(myOrders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات حالياً</p>'; return; }
 ​list.innerHTML = myOrders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'pending' ? 'في الانتظار' : o.status === 'active' ? 'جاري التوصيل' : 'مكتمل'}</span> </div> <p class="text-xs text-gray-500">المطلوب من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> </div>).join('');
 };
-​// دوال المندوب
-window.refreshDriverFeed = function() { window.renderDriverFeed(); window.showToast('تم التحديث'); };
-​window.renderDriverFeed = function() {
+​// ---- دوال المندوب ----
+window.renderDriverFeed = function() {
 const list = document.getElementById('driver-feed-list');
 if(!list) return;
-const orders = window.appState.orders.filter(o => o.status === 'pending');
-if(orders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات متاحة حالياً</p>'; return; }
-​list.innerHTML = orders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3 border-r-4 border-r-primary"> <h4 class="font-bold text-sm text-secondary mb-1">${o.type}</h4> <p class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-store text-gray-400"></i> ${o.restaurantName || 'مطعم'}</p> <p class="text-xs text-gray-500 mb-3 font-bold text-primary">أجرتك: ${o.deliveryFee} ج.م</p> <button onclick="window.driverAcceptOrder('${o.id}')" class="w-full bg-primary text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition cursor-pointer">قبول الطلب</button> </div>).join('');
+const availableOrders = window.appState.orders.filter(o => o.status === 'pending');
+if(availableOrders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات متاحة حالياً</p>'; return; }
+​list.innerHTML = availableOrders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3 border-r-4 border-r-primary"> <h4 class="font-bold text-sm text-secondary mb-1">${o.type}</h4> <p class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-store text-gray-400"></i> ${o.restaurantName || 'مطعم'}</p> <p class="text-xs text-gray-500 mb-3 font-bold text-primary">أجرتك: ${o.deliveryFee} ج.م</p> <button type="button" onclick="window.driverAcceptOrder('${o.id}')" class="w-full bg-primary text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition cursor-pointer">قبول الطلب</button> </div>).join('');
 };
 ​window.driverAcceptOrder = async function(orderId) {
 try {
-await updateDoc(doc(db, 'orders', orderId), { status: 'active', driverId: window.appState.currentUser.id, driverName: window.appState.currentUser.name });
+await updateDoc(doc(db, 'orders', orderId), {
+status: 'active',
+driverId: window.appState.currentUser.id,
+driverName: window.appState.currentUser.name
+});
 window.showToast('تم قبول الطلب!');
 window.switchDriverTab('tasks');
-} catch(e) { window.showToast('حدث خطأ، قد يكون الطلب قد سُحب', 'error'); }
+} catch(e) { window.showToast('عذراً، الطلب لم يعد متاحاً', 'error'); }
 };
 ​window.renderDriverTasks = function() {
 const list = document.getElementById('driver-tasks-list');
 if(!list) return;
-const tasks = window.appState.orders.filter(o => o.driverId === window.appState.currentUser.id);
-if(tasks.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">ليس لديك طلبات نشطة</p>'; return; }
-​list.innerHTML = tasks.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'active' ? 'جاري' : 'تم التوصيل'}</span> </div> <p class="text-xs text-gray-500 mb-1">هاتف العميل: <a href="tel:${o.contactPhone}" class="text-blue-500 font-bold underline">${o.contactPhone}</a></p> <p class="text-xs text-gray-500 mb-3">حصّل من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> ${o.status === 'active' ?<button onclick="window.driverCompleteOrder('${o.id}')" class="w-full bg-success text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition cursor-pointer">إنهاء وتسليم</button>: ''} </div>).join('');
+const myTasks = window.appState.orders.filter(o => o.driverId === window.appState.currentUser.id);
+if(myTasks.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">ليس لديك طلبات نشطة</p>'; return; }
+​list.innerHTML = myTasks.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'active' ? 'جاري' : 'تم التوصيل'}</span> </div> <p class="text-xs text-gray-500 mb-1">هاتف العميل: <a href="tel:${o.contactPhone}" class="text-blue-500 font-bold underline">${o.contactPhone}</a></p> <p class="text-xs text-gray-500 mb-3">المبلغ المطلوب من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> ${o.status === 'active' ?<button type="button" onclick="window.driverCompleteOrder('${o.id}')" class="w-full bg-success text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition cursor-pointer">إنهاء وتسليم</button>: ''} </div>).join('');
 };
 ​window.driverCompleteOrder = async function(orderId) {
-if(confirm('هل أنت متأكد من إنهاء وتسليم الطلب للعميل؟')) {
+if(confirm('هل تم تسليم الطلب للعميل واستلام المبلغ؟')) {
 try {
 await updateDoc(doc(db, 'orders', orderId), { status: 'completed' });
-window.showToast('عمل رائع! تم إنهاء الطلب بنجاح');
+window.showToast('عمل رائع! تم إنهاء الطلب');
 } catch(e) { window.showToast('حدث خطأ', 'error'); }
 }
 };
-​window.renderAdminDashboard = function() {
+​// ---- دوال الإدارة ----
+window.renderAdminDashboard = function() {
 const ordersElem = document.getElementById('admin-total-orders');
 if(ordersElem) ordersElem.innerText = window.appState.orders.length;
 };
-​// تشغيل تهيئة العرض الأولية إذا لزم الأمر
-if(window.appState.currentUser) {
-if(window.appState.currentUser.role === 'restaurant') window.renderRestOrders();
-if(window.appState.currentUser.role === 'driver') { window.renderDriverFeed(); window.renderDriverTasks(); }
-if(window.appState.currentUser.role === 'admin') window.renderAdminDashboard();
-}
 ​} catch (e) {
 console.error("Firebase init failed:", e);
 }
