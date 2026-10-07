@@ -29,9 +29,9 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 </head>
 <body class="bg-gray-100 text-gray-800">
 ​<div id="toast-container" class="fixed bottom-20 left-0 right-0 z-50 flex flex-col items-center pointer-events-none space-y-2"></div>
-​<div class="app-container">
-​<!-- 1. شاشة اختيار الدور -->
-<div id="screen-role-select" class="hidden flex-col h-screen justify-center items-center p-6 bg-white">
+​<div class="app-container" id="app">
+​<!-- 1. شاشة اختيار الدور (مفتوحة افتراضياً لمنع الشاشة البيضاء) -->
+<div id="screen-role-select" class="flex flex-col h-screen justify-center items-center p-6 bg-white">
 <div class="w-32 h-32 bg-primary rounded-full flex items-center justify-center mb-8 shadow-lg shadow-primary/40">
 <i class="fa-solid fa-motorcycle text-6xl text-white"></i>
 </div>
@@ -101,7 +101,7 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 <div class="bg-white px-4 py-4 flex justify-between items-center shadow-sm z-10">
 <div>
 <h2 class="font-bold text-lg text-secondary" id="rest-header-name">مطعم</h2>
-<p class="text-xs text-gray-500">مرحباً بك في لوحة تحكم المطعم</p>
+<p class="text-xs text-gray-500">لوحة تحكم المطعم</p>
 </div>
 <button onclick="window.logout()" class="text-gray-400 hover:text-danger active:scale-95"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
@@ -193,34 +193,37 @@ body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 </div>
 </div>
 </div>
-​<!-- كود الجافاسكريبت المضمن للتشغيل الفوري للأزرار -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-​// 1. تعريف حالة التطبيق
-const state = { currentUser: null, currentRoleSelecting: null, users: [], orders: [] };
-​// 2. ربط النوافذ والأزرار مباشرة بالمتصفح (لحل مشكلة عدم الاستجابة)
-window.navTo = (screenId) => {
-document.querySelectorAll('.app-container > div').forEach(el => {
-if(el.id.startsWith('screen-')) { el.classList.add('hidden'); el.classList.remove('flex'); }
-});
-const target = document.getElementById(screenId);
-if(target) { target.classList.remove('hidden'); target.classList.add('flex'); }
+​<script type="module">
+// 1. تعريف حالة التطبيق وجعلها عامة (Global)
+window.appState = {
+currentUser: null,
+currentRoleSelecting: null,
+users: [],
+orders: []
 };
-​window.navToLogin = (role) => {
-state.currentRoleSelecting = role;
+​// 2. دوال الواجهة الأساسية مربوطة مباشرة بالـ Window لتعمل الأزرار
+window.navTo = function(screenId) {
+const screens = ['screen-role-select', 'screen-login', 'screen-register', 'screen-restaurant', 'screen-driver', 'screen-admin'];
+screens.forEach(id => {
+document.getElementById(id).classList.add('hidden');
+document.getElementById(id).classList.remove('flex');
+});
+document.getElementById(screenId).classList.remove('hidden');
+document.getElementById(screenId).classList.add('flex');
+};
+​window.navToLogin = function(role) {
+window.appState.currentRoleSelecting = role;
 window.navTo('screen-login');
 document.getElementById('login-title').innerText = role === 'restaurant' ? 'دخول المطاعم' : 'دخول المناديب';
 };
-​window.toggleRegisterForm = () => {
+​window.toggleRegisterForm = function() {
 const login = document.getElementById('screen-login');
 const reg = document.getElementById('screen-register');
 login.classList.toggle('hidden'); login.classList.toggle('flex');
 reg.classList.toggle('hidden'); reg.classList.toggle('flex');
-document.getElementById('register-title').innerText = state.currentRoleSelecting === 'restaurant' ? 'تسجيل مطعم جديد' : 'تسجيل مندوب جديد';
+document.getElementById('register-title').innerText = window.appState.currentRoleSelecting === 'restaurant' ? 'تسجيل مطعم جديد' : 'تسجيل مندوب جديد';
 };
-​window.showToast = (message, type = 'success') => {
+​window.showToast = function(message, type = 'success') {
 const container = document.getElementById('toast-container');
 const toast = document.createElement('div');
 toast.className = px-4 py-3 rounded-lg shadow-lg text-sm font-bold ${type === 'success' ? 'bg-secondary text-white' : 'bg-danger text-white'} toast-enter;
@@ -228,25 +231,38 @@ toast.innerHTML = message;
 container.appendChild(toast);
 setTimeout(() => { toast.classList.remove('toast-enter'); setTimeout(() => toast.remove(), 3000); }, 100);
 };
-​// 3. قراءة الجلسة المخزنة فوراً لحل مشكلة الريفرش
-const savedUser = localStorage.getItem('wasel_user');
-if (savedUser) {
-state.currentUser = JSON.parse(savedUser);
-if(state.currentUser.role === 'restaurant') {
+​window.logout = function() {
+window.appState.currentUser = null;
+localStorage.removeItem('wasel_user');
+window.navTo('screen-role-select');
+};
+​window.loginAsAdmin = function() {
+window.appState.currentUser = { role: 'admin', name: 'المدير' };
+localStorage.setItem('wasel_user', JSON.stringify(window.appState.currentUser));
+window.navTo('screen-admin');
+};
+​// 3. التحقق الفوري من تسجيل الدخول (لحجب الشاشة الرئيسية إذا كان المستخدم مسجلاً)
+const savedUserStr = localStorage.getItem('wasel_user');
+if (savedUserStr) {
+try {
+const user = JSON.parse(savedUserStr);
+window.appState.currentUser = user;
+if(user.role === 'restaurant') {
 window.navTo('screen-restaurant');
-document.getElementById('rest-header-name').innerText = state.currentUser.name;
-} else if(state.currentUser.role === 'driver') {
+document.getElementById('rest-header-name').innerText = user.name;
+} else if(user.role === 'driver') {
 window.navTo('screen-driver');
-document.getElementById('driver-header-name').innerText = state.currentUser.name;
-} else if(state.currentUser.role === 'admin') {
+document.getElementById('driver-header-name').innerText = user.name;
+} else if(user.role === 'admin') {
 window.navTo('screen-admin');
 }
-} else {
-// إذا لم يكن هناك مستخدم مسجل، اعرض الشاشة الرئيسية فوراً
-window.navTo('screen-role-select');
+} catch(e) { console.error("Error reading cache", e); window.navTo('screen-role-select'); }
 }
-​// 4. إعداد فايربيز (مدمج بمعلوماتك)
-const firebaseConfig = {
+​// 4. استيراد فايربيز
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+​const firebaseConfig = {
 apiKey: "AIzaSyAjyqCnBR_57Cklb6hkVfk6epnmhNUHdNo",
 authDomain: "ahmed-account-system.firebaseapp.com",
 projectId: "ahmed-account-system",
@@ -260,33 +276,34 @@ const db = getFirestore(app);
 const usersCol = collection(db, 'users');
 const ordersCol = collection(db, 'orders');
 ​signInAnonymously(auth).catch(err => console.error("Auth error:", err));
-​// الاستماع للتحديثات في الوقت الفعلي
+​// الاستماع لقواعد البيانات
 onSnapshot(usersCol, (snapshot) => {
-state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+window.appState.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 });
 ​onSnapshot(ordersCol, (snapshot) => {
-state.orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-updateDynamicUI();
+window.appState.orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+window.updateDynamicUI();
 });
-​function updateDynamicUI() {
-if(!state.currentUser) return;
-if(state.currentUser.role === 'driver') { window.renderDriverFeed(); window.renderDriverTasks(); }
-else if(state.currentUser.role === 'restaurant') { window.renderRestOrders(); }
-else if(state.currentUser.role === 'admin') { document.getElementById('admin-total-orders').innerText = state.orders.length; }
-}
-​// 5. العمليات الأساسية للمستخدمين
-window.processLogin = () => {
+​window.updateDynamicUI = function() {
+if(!window.appState.currentUser) return;
+if(window.appState.currentUser.role === 'driver') { window.renderDriverFeed(); window.renderDriverTasks(); }
+else if(window.appState.currentUser.role === 'restaurant') { window.renderRestOrders(); }
+else if(window.appState.currentUser.role === 'admin') { document.getElementById('admin-total-orders').innerText = window.appState.orders.length; }
+};
+​// 5. دوال تسجيل الدخول والتسجيل والمطعم والمندوب
+window.processLogin = function() {
 const phone = document.getElementById('login-phone').value;
 const pass = document.getElementById('login-password').value;
-​if(phone === 'admin' && pass === 'admin') { window.loginAsAdmin(); return; }
-​const user = state.users.find(u => u.phone === phone && u.password === pass && u.role === state.currentRoleSelecting);
+if(phone === 'admin' && pass === 'admin') { window.loginAsAdmin(); return; }
+​const user = window.appState.users.find(u => u.phone === phone && u.password === pass && u.role === window.appState.currentRoleSelecting);
 if(user) {
-state.currentUser = user;
-localStorage.setItem('wasel_user', JSON.stringify(user)); // حفظ الجلسة
+window.appState.currentUser = user;
+localStorage.setItem('wasel_user', JSON.stringify(user));
 window.showToast('تم تسجيل الدخول بنجاح');
 if(user.role === 'restaurant') {
 window.navTo('screen-restaurant');
 document.getElementById('rest-header-name').innerText = user.name;
+window.switchRestTab('post');
 } else {
 window.navTo('screen-driver');
 document.getElementById('driver-header-name').innerText = user.name;
@@ -296,45 +313,35 @@ window.switchDriverTab('feed');
 window.showToast('رقم الهاتف أو كلمة المرور غير صحيحة', 'error');
 }
 };
-​window.processRegister = async () => {
+​window.processRegister = async function() {
 const name = document.getElementById('reg-name').value;
 const phone = document.getElementById('reg-phone').value;
 const password = document.getElementById('reg-password').value;
-if(!name || !phone || !password) { window.showToast('يرجى ملء جميع الحقول', 'error'); return; }
+if(!name || !phone || !password) { window.showToast('يرجى ملء كافة الحقول', 'error'); return; }
 ​try {
-await addDoc(usersCol, { role: state.currentRoleSelecting, name, phone, password });
-window.showToast('تم إنشاء الحساب بنجاح، سجل دخولك الآن');
+await addDoc(usersCol, { role: window.appState.currentRoleSelecting, name, phone, password });
+window.showToast('تم الحفظ! سجل دخولك الآن');
 window.toggleRegisterForm();
-} catch(e) { window.showToast('حدث خطأ أثناء التسجيل', 'error'); }
+} catch(e) { window.showToast('خطأ في الاتصال', 'error'); }
 };
-​window.logout = () => {
-state.currentUser = null;
-localStorage.removeItem('wasel_user');
-window.navTo('screen-role-select');
-};
-​window.loginAsAdmin = () => {
-state.currentUser = { role: 'admin', name: 'المدير' };
-localStorage.setItem('wasel_user', JSON.stringify(state.currentUser));
-window.navTo('screen-admin');
-};
-​// وظائف المطعم
-window.switchRestTab = (tab) => {
+​// دوال المطعم
+window.switchRestTab = function(tab) {
 document.getElementById('rest-tab-post').classList.toggle('hidden', tab !== 'post');
 document.getElementById('rest-tab-orders').classList.toggle('hidden', tab !== 'orders');
 document.getElementById('btn-rest-post').className = flex flex-col items-center p-2 w-1/2 rounded-lg transition ${tab === 'post' ? 'text-primary' : 'text-gray-400'};
 document.getElementById('btn-rest-orders').className = flex flex-col items-center p-2 w-1/2 rounded-lg transition ${tab === 'orders' ? 'text-primary' : 'text-gray-400'};
 if(tab === 'orders') window.renderRestOrders();
 };
-​window.postOrder = async () => {
+​window.postOrder = async function() {
 const type = document.getElementById('order-type').value;
 const price = document.getElementById('order-price').value;
 const fee = document.getElementById('delivery-fee').value;
 const phone = document.getElementById('customer-phone').value;
-​if(!type || !price || !fee || !phone) { window.showToast('يرجى ملء كافة الحقول', 'error'); return; }
+​if(!type || !price || !fee || !phone) { window.showToast('أكمل البيانات المطلوبة', 'error'); return; }
 ​await addDoc(ordersCol, {
-restaurantId: state.currentUser.id, restaurantName: state.currentUser.name,
+restaurantId: window.appState.currentUser.id, restaurantName: window.appState.currentUser.name,
 type, deliveryFee: fee, orderPrice: price, contactPhone: phone,
-status: 'pending', createdAt: new Date()
+status: 'pending', createdAt: new Date().toISOString()
 });
 ​document.getElementById('order-type').value = '';
 document.getElementById('order-price').value = '';
@@ -343,15 +350,15 @@ document.getElementById('customer-phone').value = '';
 ​window.showToast('تم نشر الطلب بنجاح');
 window.switchRestTab('orders');
 };
-​window.renderRestOrders = () => {
+​window.renderRestOrders = function() {
 const list = document.getElementById('rest-orders-list');
 if(!list) return;
-const myOrders = state.orders.filter(o => o.restaurantId === state.currentUser.id);
+const myOrders = window.appState.orders.filter(o => o.restaurantId === window.appState.currentUser.id);
 if(myOrders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات</p>'; return; }
-​list.innerHTML = myOrders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'pending' ? 'في الانتظار' : o.status === 'active' ? 'جاري التوصيل' : 'مكتمل'}</span> </div> <p class="text-xs text-gray-500 mb-1">المطلوب من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> </div>).join('');
+​list.innerHTML = myOrders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'pending' ? 'في الانتظار' : o.status === 'active' ? 'جاري التوصيل' : 'مكتمل'}</span> </div> <p class="text-xs text-gray-500">المطلوب من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> </div>).join('');
 };
-​// وظائف المندوب
-window.switchDriverTab = (tab) => {
+​// دوال المندوب
+window.switchDriverTab = function(tab) {
 document.getElementById('driver-tab-feed').classList.toggle('hidden', tab !== 'feed');
 document.getElementById('driver-tab-tasks').classList.toggle('hidden', tab !== 'tasks');
 document.getElementById('btn-driver-feed').className = flex flex-col items-center p-2 w-1/2 rounded-lg transition ${tab === 'feed' ? 'text-primary' : 'text-gray-400'};
@@ -359,30 +366,32 @@ document.getElementById('btn-driver-tasks').className = flex flex-col items-cent
 if(tab === 'feed') window.renderDriverFeed();
 if(tab === 'tasks') window.renderDriverTasks();
 };
-​window.refreshDriverFeed = () => { window.renderDriverFeed(); window.showToast('تم التحديث'); };
-​window.renderDriverFeed = () => {
+​window.refreshDriverFeed = function() { window.renderDriverFeed(); window.showToast('تم التحديث'); };
+​window.renderDriverFeed = function() {
 const list = document.getElementById('driver-feed-list');
 if(!list) return;
-const orders = state.orders.filter(o => o.status === 'pending');
+const orders = window.appState.orders.filter(o => o.status === 'pending');
 if(orders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات متاحة حالياً</p>'; return; }
-​list.innerHTML = orders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3 border-r-4 border-r-primary"> <h4 class="font-bold text-sm text-secondary mb-1">وصف الطلب: ${o.type}</h4> <p class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-store text-gray-400"></i> المطعم: ${o.restaurantName || 'غير معروف'}</p> <p class="text-xs text-gray-500 mb-3 font-bold text-primary"><i class="fa-solid fa-money-bill"></i> تكلفة التوصيل لك: ${o.deliveryFee} ج.م</p> <button onclick="window.driverAcceptOrder('${o.id}')" class="w-full bg-primary text-white py-2.5 rounded-xl font-bold text-xs shadow active:scale-95 transition">قبول الطلب وتوصيله</button> </div>).join('');
+​list.innerHTML = orders.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3 border-r-4 border-r-primary"> <h4 class="font-bold text-sm text-secondary mb-1">${o.type}</h4> <p class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-store text-gray-400"></i> ${o.restaurantName || 'مطعم'}</p> <p class="text-xs text-gray-500 mb-3 font-bold text-primary">أجرتك: ${o.deliveryFee} ج.م</p> <button onclick="window.driverAcceptOrder('${o.id}')" class="w-full bg-primary text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition">قبول الطلب</button> </div>).join('');
 };
-​window.driverAcceptOrder = async (orderId) => {
-await updateDoc(doc(db, 'orders', orderId), { status: 'active', driverId: state.currentUser.id, driverName: state.currentUser.name });
-window.showToast('تم قبول الطلب، اذهب للمطعم الآن!');
+​window.driverAcceptOrder = async function(orderId) {
+try {
+await updateDoc(doc(db, 'orders', orderId), { status: 'active', driverId: window.appState.currentUser.id, driverName: window.appState.currentUser.name });
+window.showToast('تم قبول الطلب!');
 window.switchDriverTab('tasks');
+} catch(e) { window.showToast('حدث خطأ', 'error'); }
 };
-​window.renderDriverTasks = () => {
+​window.renderDriverTasks = function() {
 const list = document.getElementById('driver-tasks-list');
 if(!list) return;
-const tasks = state.orders.filter(o => o.driverId === state.currentUser.id);
+const tasks = window.appState.orders.filter(o => o.driverId === window.appState.currentUser.id);
 if(tasks.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">ليس لديك طلبات نشطة</p>'; return; }
-​list.innerHTML = tasks.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'active' ? 'جاري' : 'تم التوصيل'}</span> </div> <p class="text-xs text-gray-500 mb-1">هاتف العميل: <a href="tel:${o.contactPhone}" class="text-blue-500 font-bold underline">${o.contactPhone}</a></p> <p class="text-xs text-gray-500 mb-3">المبلغ المحصل من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> ${o.status === 'active' ?<button onclick="window.driverCompleteOrder('${o.id}')" class="w-full bg-success text-white py-2.5 rounded-xl font-bold text-xs shadow active:scale-95 transition"><i class="fa-solid fa-check"></i> إنهاء الطلب وتسليمه</button>: ''} </div>).join('');
+​list.innerHTML = tasks.map(o => <div class="bg-white p-4 rounded-xl shadow-sm border mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${o.type}</h4> <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'active' ? 'جاري' : 'تم التوصيل'}</span> </div> <p class="text-xs text-gray-500 mb-1">هاتف العميل: <a href="tel:${o.contactPhone}" class="text-blue-500 font-bold underline">${o.contactPhone}</a></p> <p class="text-xs text-gray-500 mb-3">حصّل من العميل: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p> ${o.status === 'active' ?<button onclick="window.driverCompleteOrder('${o.id}')" class="w-full bg-success text-white py-2 rounded-lg font-bold text-xs shadow active:scale-95 transition">إنهاء وتسليم</button>: ''} </div>).join('');
 };
-​window.driverCompleteOrder = async (orderId) => {
-if(confirm('هل أنت متأكد من تسليم الطلب للعميل؟')) {
+​window.driverCompleteOrder = async function(orderId) {
+if(confirm('هل أنت متأكد من تسليم الطلب؟')) {
 await updateDoc(doc(db, 'orders', orderId), { status: 'completed' });
-window.showToast('تم إنهاء الطلب بنجاح، عمل رائع!');
+window.showToast('عمل رائع! تم إنهاء الطلب');
 }
 };
 </script>
