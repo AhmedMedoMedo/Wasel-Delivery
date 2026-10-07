@@ -16,7 +16,7 @@
                         sans: ['Tajawal', 'sans-serif'],
                     },
                     colors: {
-                        primary: '#FF5722', // Orange for food delivery vibe
+                        primary: '#FF5722', 
                         secondary: '#263238',
                         accent: '#FFC107',
                         success: '#4CAF50',
@@ -34,7 +34,6 @@
         .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease-out; }
         .toast-exit { transform: translateY(0); opacity: 1; }
         .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s ease-in; }
-        /* Mobile App Simulation Wrapper */
         .app-container {
             max-width: 480px;
             margin: 0 auto;
@@ -48,7 +47,7 @@
         .main-content {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 80px; /* Space for bottom nav */
+            padding-bottom: 80px;
         }
         input[type="file"]::file-selector-button {
             border: none; background: #FF5722; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: 'Tajawal', sans-serif;
@@ -174,7 +173,6 @@
 
         <!-- 3. شاشة المطعم -->
         <div id="screen-restaurant" class="hidden flex-col h-screen">
-            <!-- Header -->
             <div class="bg-white px-4 py-4 flex justify-between items-center shadow-sm z-10">
                 <div>
                     <h2 class="font-bold text-lg text-secondary" id="rest-header-name">مطعم</h2>
@@ -183,7 +181,6 @@
                 <button onclick="logout()" class="text-gray-400 hover:text-danger"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
             </div>
 
-            <!-- Main Content -->
             <div class="main-content bg-gray-100 p-4" id="rest-content">
                 <!-- تبويب إضافة طلب (منشور) -->
                 <div id="rest-tab-post" class="space-y-4">
@@ -205,7 +202,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">رقم تواصل المطعم (للمندوب)</label>
+                                <label class="block text-xs text-gray-500 mb-1">رقم تواصل المطعم</label>
                                 <input type="tel" id="customer-phone" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="01xxxxxxxxx">
                             </div>
                             <div>
@@ -246,7 +243,6 @@
                 </div>
             </div>
 
-            <!-- Bottom Nav -->
             <div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10">
                 <button onclick="switchRestTab('post')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition" id="btn-rest-post">
                     <i class="fa-solid fa-plus-circle text-xl mb-1"></i>
@@ -261,7 +257,6 @@
 
         <!-- 4. شاشة المندوب -->
         <div id="screen-driver" class="hidden flex-col h-screen">
-            <!-- Header -->
             <div class="bg-white px-4 py-4 flex justify-between items-center shadow-sm z-10">
                 <div class="flex items-center gap-3">
                     <div class="relative">
@@ -278,7 +273,6 @@
                 <button onclick="logout()" class="text-gray-400 hover:text-danger"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
             </div>
 
-            <!-- Main Content -->
             <div class="main-content bg-gray-100 p-4" id="driver-content">
                 <!-- تبويب الطلبات المتاحة (Feed) -->
                 <div id="driver-tab-feed" class="space-y-4">
@@ -300,7 +294,6 @@
                 </div>
             </div>
 
-            <!-- Bottom Nav -->
             <div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
                 <button onclick="switchDriverTab('feed')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition" id="btn-driver-feed">
                     <i class="fa-solid fa-house text-xl mb-1"></i>
@@ -383,7 +376,6 @@
             orders: []
         };
 
-        // الكود الحقيقي لمشروعك بعد تحديثه
         const firebaseConfig = {
             apiKey: "AIzaSyAjyqCnBR_57Cklb6hkVfk6epnmhNUHdNo",
             authDomain: "ahmed-account-system.firebaseapp.com",
@@ -399,28 +391,33 @@
 
         let usersCol, ordersCol;
 
-        // الاتصال اللحظي بالخادم الحقيقي
         async function initFirebase() {
             try {
                 await signInAnonymously(auth);
                 if(!auth.currentUser) return;
 
-                // الروابط المباشرة لبيئة الإنتاج الحقيقية
                 usersCol = collection(db, 'users');
                 ordersCol = collection(db, 'orders');
 
-                // مراقبة المستخدمين بشكل لحظي
+                // استرجاع الجلسة المحفوظة مسبقاً لمنع تسجيل الخروج عند التحديث
+                const savedUser = localStorage.getItem('wasel_user');
+                if(savedUser) {
+                    state.currentUser = JSON.parse(savedUser);
+                }
+
                 onSnapshot(usersCol, (snapshot) => {
                     state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
                     if(state.currentUser && state.currentUser.role !== 'admin') {
                         const updated = state.users.find(u => u.id === state.currentUser.id);
-                        if(updated) state.currentUser = updated;
+                        if(updated) {
+                            state.currentUser = updated;
+                            localStorage.setItem('wasel_user', JSON.stringify(updated));
+                        }
                     }
                     updateDynamicUI();
                 }, (error) => console.error("Users sync error:", error));
 
-                // مراقبة الطلبات بشكل لحظي
                 onSnapshot(ordersCol, (snapshot) => {
                     state.orders = snapshot.docs.map(doc => ({
                         id: doc.id,
@@ -430,6 +427,13 @@
                     }));
                     updateDynamicUI();
                 }, (error) => console.error("Orders sync error:", error));
+
+                // توجيه المستخدم تلقائياً للوحة الخاصة به إذا كان مسجلاً مسبقاً
+                if(state.currentUser) {
+                    if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
+                    else if(state.currentUser.role === 'driver') initDriverDashboard();
+                    else if(state.currentUser.role === 'admin') loginAsAdmin();
+                }
 
             } catch (e) {
                 console.error("Firebase Init Error:", e);
@@ -533,6 +537,7 @@
             
             if(user) {
                 state.currentUser = user;
+                localStorage.setItem('wasel_user', JSON.stringify(user));
                 showToast('تم تسجيل الدخول بنجاح');
                 if(user.role === 'restaurant') initRestaurantDashboard();
                 else initDriverDashboard();
@@ -552,7 +557,6 @@
             btn.disabled = true;
 
             try {
-                // حفظ البيانات في السحابة
                 await addDoc(usersCol, {
                     role: state.currentRoleSelecting,
                     name: name,
@@ -579,6 +583,7 @@
 
         function logout() {
             state.currentUser = null;
+            localStorage.removeItem('wasel_user');
             navTo('screen-role-select');
         }
 
@@ -617,7 +622,6 @@
             btn.disabled = true;
 
             try {
-                // حفظ الطلب في السحابة
                 await addDoc(ordersCol, {
                     restaurantId: state.currentUser.id,
                     type, vehicleType: vehicle, deliveryFee: fee, orderPrice: price, contactPhone: phone,
@@ -765,7 +769,6 @@
         async function saveNewFee() {
             const newFee = document.getElementById('new-fee-input').value;
             if(newFee && !isNaN(newFee) && parseFloat(newFee) > 0) {
-                // تحديث قاعدة البيانات الحقيقية
                 const orderRef = doc(db, 'orders', editingOrderId);
                 await updateDoc(orderRef, { deliveryFee: parseFloat(newFee) });
                 
@@ -923,7 +926,7 @@
                 if(order.status === 'pending' && order.applyingDrivers?.includes(state.currentUser.id)) {
                     statusHtml = `
                         <div class="bg-orange-50 text-orange-700 p-3 rounded-lg text-xs mt-3 flex items-center gap-2 border border-orange-100">
-                            <i class="fa-solid fa-hourglass-half fa-spin"></i> في انتظار موافقة المطعم (يتم التقييم والمقارنة)...
+                            <i class="fa-solid fa-hourglass-half fa-spin"></i> في انتظار موافقة المطعم...
                         </div>
                     `;
                 } else if(order.status === 'active') {
@@ -1072,7 +1075,6 @@
             return html;
         }
 
-        // جعل الدوال متاحة عالمياً (لتعمل مع أزرار HTML)
         window.navTo = navTo;
         window.toggleRegisterForm = toggleRegisterForm;
         window.processLogin = processLogin;
@@ -1093,7 +1095,9 @@
         window.loginAsAdmin = loginAsAdmin;
 
         window.onload = () => {
-            navTo('screen-role-select');
+            if(!state.currentUser) {
+                navTo('screen-role-select');
+            }
         };
 
     </script>
