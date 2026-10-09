@@ -91,7 +91,6 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 <i class="fa-solid fa-user-tie"></i> لوحة الإدارة
 </button>
 </div>
-<div class="mt-8 text-xs text-gray-400 text-center">(الإصدار 4.0 - سريع جداً)</div>
 </div>
 <!-- 2. شاشة تسجيل الدخول -->
 <div id="screen-login" class="hidden flex-col h-screen bg-white">
@@ -350,9 +349,6 @@ currentRoleSelecting: null,
 users: [],
 orders: []
 };
-
-let isDataLoaded = false;
-
 const firebaseConfig = {
 apiKey: "AIzaSyAjyqCnBR_57Cklb6hkVfk6epnmhNUHdNo",
 authDomain: "ahmed-account-system.firebaseapp.com",
@@ -366,54 +362,59 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 let usersCol, ordersCol;
 
-// Check storage first to route user immediately.
-const savedUser = localStorage.getItem('wasel_user');
-if(savedUser) {
-    state.currentUser = JSON.parse(savedUser);
-    if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
-    else if(state.currentUser.role === 'driver') initDriverDashboard();
-    else if(state.currentUser.role === 'admin') loginAsAdmin();
-} else {
-    navTo('screen-role-select');
-}
+// Added variable to check if server sent data
+let isOrdersLoadedFromServer = false;
 
 async function initFirebase() {
-    try {
-        await signInAnonymously(auth);
-        if(!auth.currentUser) return;
-        
-        usersCol = collection(db, 'users');
-        ordersCol = collection(db, 'orders');
+try {
+const savedUser = localStorage.getItem('wasel_user');
+if(savedUser) {
+state.currentUser = JSON.parse(savedUser);
+if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
+else if(state.currentUser.role === 'driver') initDriverDashboard();
+else if(state.currentUser.role === 'admin') loginAsAdmin();
+} else {
+navTo('screen-role-select');
+}
 
-        onSnapshot(usersCol, (snapshot) => {
-            state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if(state.currentUser && state.currentUser.role !== 'admin') {
-                const updated = state.users.find(u => u.id === state.currentUser.id);
-                if(updated) {
-                    state.currentUser = updated;
-                    localStorage.setItem('wasel_user', JSON.stringify(updated));
-                }
-            }
-            updateDynamicUI();
-        }, (error) => console.error("Users sync error:", error));
+await signInAnonymously(auth);
+if(!auth.currentUser) return;
+usersCol = collection(db, 'users');
+ordersCol = collection(db, 'orders');
 
-        onSnapshot(ordersCol, (snapshot) => {
-            state.orders = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate() || new Date(),
-                completedAt: doc.data().completedAt?.toDate() || null
-            }));
-            
-            // Mark data as loaded regardless of whether it's empty or not.
-            isDataLoaded = true;
-            updateDynamicUI();
-        }, (error) => console.error("Orders sync error:", error));
+onSnapshot(usersCol, (snapshot) => {
+state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+if(state.currentUser && state.currentUser.role !== 'admin') {
+const updated = state.users.find(u => u.id === state.currentUser.id);
+if(updated) {
+state.currentUser = updated;
+localStorage.setItem('wasel_user', JSON.stringify(updated));
+}
+}
+updateDynamicUI();
+}, (error) => console.error("Users sync error:", error));
 
-    } catch (e) {
-        console.error("Firebase Init Error:", e);
-        showToast('حدث خطأ في الاتصال بالشبكة', 'error');
-    }
+// Fixed to wait for actual server data using metadata
+onSnapshot(ordersCol, { includeMetadataChanges: true }, (snapshot) => {
+  // If the snapshot has pending writes or comes from cache, we might not have real data yet.
+  if (!snapshot.metadata.fromCache) {
+      isOrdersLoadedFromServer = true;
+  }
+  
+  state.orders = snapshot.docs.map(doc => ({
+  id: doc.id,
+  ...doc.data(),
+  createdAt: doc.data().createdAt?.toDate() || new Date(),
+  completedAt: doc.data().completedAt?.toDate() || null
+  }));
+  updateDynamicUI();
+}, (error) => console.error("Orders sync error:", error));
+
+
+} catch (e) {
+console.error("Firebase Init Error:", e);
+showToast('حدث خطأ بالاتصال. تأكد من تفعيل Authentication.', 'error');
+}
 }
 initFirebase();
 
@@ -585,7 +586,7 @@ btn.disabled = false;
 }
 function renderRestOrders() {
 const list = document.getElementById('rest-orders-list');
-if (!isDataLoaded) {
+if (!isOrdersLoadedFromServer) {
     list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
     return;
 }
@@ -704,7 +705,7 @@ showToast('تم تحديث قائمة الطلبات');
 }
 function renderDriverFeed() {
 const list = document.getElementById('driver-feed-list');
-if (!isDataLoaded) {
+if (!isOrdersLoadedFromServer) {
     list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
     return;
 }
@@ -764,7 +765,7 @@ showToast('تم إرسال طلبك للمطعم! يرجى انتظار المو
 }
 function renderDriverTasks() {
 const list = document.getElementById('driver-tasks-list');
-if (!isDataLoaded) {
+if (!isOrdersLoadedFromServer) {
     list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
     return;
 }
