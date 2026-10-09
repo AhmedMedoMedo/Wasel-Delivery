@@ -103,7 +103,7 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </button>
 </div>
 <div class="absolute bottom-4 text-gray-300 text-xs font-bold text-center w-full">
-(الإصدار 3.2 - السريع)
+(الإصدار 3.3 - المزامنة المستقرة)
 </div>
 </div>
 
@@ -369,7 +369,9 @@ let state = {
     currentUser: null,
     currentRoleSelecting: null,
     users: [],
-    orders: []
+    orders: [],
+    isOrdersLoaded: false,
+    isUsersLoaded: false
 };
 
 const firebaseConfig = {
@@ -390,6 +392,80 @@ let usersCol, ordersCol;
 // الدوال الرئيسية للواجهة
 // ==========================================
 
+function checkDataLoaded() {
+    // Only attempt to render data if both users and orders have returned from Firestore
+    // This prevents the "empty array" flash that happens on initial onSnapshot connection
+    if (state.isOrdersLoaded && state.isUsersLoaded) {
+        window.updateDynamicUI();
+        
+        // Hide loader safely
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 300);
+        }
+
+        // Navigate user if they are logged in
+        if(state.currentUser) {
+            if(state.currentUser.role === 'restaurant') window.initRestaurantDashboard();
+            else if(state.currentUser.role === 'driver') window.initDriverDashboard();
+            else if(state.currentUser.role === 'admin') window.loginAsAdmin();
+        } else {
+            window.navTo('screen-role-select');
+        }
+    }
+}
+
+async function initFirebase() {
+    try {
+        // Read LocalStorage immediately
+        const savedUserStr = localStorage.getItem('wasel_user');
+        if (savedUserStr) {
+            try { state.currentUser = JSON.parse(savedUserStr); } catch (e) {}
+        }
+
+        // Wait for Anonymous Auth to fully resolve before attaching listeners
+        await signInAnonymously(auth);
+
+        usersCol = collection(db, 'users');
+        ordersCol = collection(db, 'orders');
+
+        onSnapshot(usersCol, (snapshot) => {
+            state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            state.isUsersLoaded = true;
+            
+            // Sync current user with latest DB data if exists
+            if(state.currentUser && state.currentUser.role !== 'admin') {
+                const updated = state.users.find(u => u.id === state.currentUser.id);
+                if(updated) {
+                    state.currentUser = updated;
+                    localStorage.setItem('wasel_user', JSON.stringify(updated));
+                }
+            }
+            checkDataLoaded();
+        }, (error) => console.error("Users sync error:", error));
+
+        onSnapshot(ordersCol, (snapshot) => {
+            state.orders = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || new Date(),
+                completedAt: doc.data().completedAt?.toDate() || null
+            }));
+            state.isOrdersLoaded = true;
+            checkDataLoaded();
+        }, (error) => console.error("Orders sync error:", error));
+
+    } catch (e) {
+        console.error("Firebase Auth Error:", e);
+        // Fallback if network fails completely
+        const loader = document.getElementById('initial-loader');
+        if (loader) loader.style.display = 'none';
+        window.navTo('screen-role-select');
+        window.showToast('فشل الاتصال بقاعدة البيانات. تأكد من اتصال الإنترنت.', 'error');
+    }
+}
+
 function updateDynamicUI() {
     if(!state.currentUser) return;
     const driverComm = document.getElementById('driver-commission');
@@ -404,11 +480,11 @@ function updateDynamicUI() {
     if(driverRating && state.currentUser.role === 'driver') 
         driverRating.innerText = getDriverRating(state.currentUser.id);
     
-    if(state.currentUser.role === 'restaurant') renderRestOrders();
+    if(state.currentUser.role === 'restaurant') window.renderRestOrders();
     else if(state.currentUser.role === 'driver') {
-        renderDriverFeed();
-        renderDriverTasks();
-    } else if(state.currentUser.role === 'admin') renderAdminDashboard();
+        window.renderDriverFeed();
+        window.renderDriverTasks();
+    } else if(state.currentUser.role === 'admin') window.renderAdminDashboard();
 }
 
 function navTo(screenId, params = {}) {
@@ -520,7 +596,7 @@ async function processRegister() {
 function logout() {
     state.currentUser = null;
     localStorage.removeItem('wasel_user');
-    navTo('screen-role-select');
+    window.navTo('screen-role-select');
 }
 
 // ==========================================
@@ -528,13 +604,13 @@ function logout() {
 // ==========================================
 
 function initRestaurantDashboard() {
-    navTo('screen-restaurant');
+    window.navTo('screen-restaurant');
     document.getElementById('rest-header-name').innerText = state.currentUser.name;
     if(state.currentUser.commissionOwed !== undefined) {
         document.getElementById('rest-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
     }
-    switchRestTab('post');
-    renderRestOrders();
+    window.switchRestTab('post');
+    window.renderRestOrders();
 }
 
 function switchRestTab(tab) {
@@ -544,7 +620,7 @@ function switchRestTab(tab) {
     document.getElementById('btn-rest-post').classList.toggle('text-gray-400', tab !== 'post');
     document.getElementById('btn-rest-orders').classList.toggle('text-primary', tab === 'orders');
     document.getElementById('btn-rest-orders').classList.toggle('text-gray-400', tab !== 'orders');
-    if(tab === 'orders') renderRestOrders();
+    if(tab === 'orders') window.renderRestOrders();
 }
 
 async function postOrder() {
@@ -581,10 +657,27 @@ async function postOrder() {
     }
 }
 
+async function deleteOrder(orderId) {
+    if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+        try {
+            await deleteDoc(doc(db, 'orders', orderId));
+            window.showToast('تم حذف الطلب بنجاح');
+        } catch(e) {
+            window.showToast('حدث خطأ أثناء الحذف', 'error');
+        }
+    }
+}
+
 function renderRestOrders() {
     const list = document.getElementById('rest-orders-list');
     if(!list) return;
     
+    // Safety check ensuring data is loaded before mapping
+    if (!state.isOrdersLoaded) {
+        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
+        return;
+    }
+
     const myOrders = state.orders.filter(o => o.restaurantId === state.currentUser.id).sort((a,b) => b.createdAt - a.createdAt);
     if(myOrders.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-box-open text-4xl mb-2"></i><p>لا توجد طلبات حالياً</p></div>`;
@@ -624,7 +717,7 @@ function renderRestOrders() {
                 actionHtml = `<div class="mt-3 text-center text-xs text-success bg-green-50 py-2 rounded-lg"><i class="fa-solid fa-check-circle"></i> تم التقييم وإنهاء العملية</div>`;
             }
         }
-        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"> <div class="flex justify-between items-start mb-2"> <div> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock"></i> ${formatTimeAgo(order.createdAt)}</span> </div> ${statusBadge} </div> <div class="flex gap-4 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg mb-2"> <span><i class="fa-solid fa-motorcycle text-primary"></i> ${order.vehicleType === 'motorcycle' ? 'موتوسيكل' : order.vehicleType === 'car' ? 'سيارة' : 'أي مركبة'}</span> <span><i class="fa-solid fa-money-bill-wave text-success"></i> توصيل: ${order.deliveryFee} ج.م</span> </div> ${actionHtml} </div>`;
+        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3 relative"> <div class="flex justify-between items-start mb-2"> <div> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock"></i> ${formatTimeAgo(order.createdAt)}</span> </div> <div class="flex flex-col items-end gap-1"> ${statusBadge} ${order.status === 'pending' ? `<button onclick="window.deleteOrder('${order.id}')" class="text-[10px] text-danger underline"><i class="fa-solid fa-trash"></i> حذف الطلب</button>` : ''}</div></div> <div class="flex gap-4 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg mb-2"> <span><i class="fa-solid fa-motorcycle text-primary"></i> ${order.vehicleType === 'motorcycle' ? 'موتوسيكل' : order.vehicleType === 'car' ? 'سيارة' : 'أي مركبة'}</span> <span><i class="fa-solid fa-money-bill-wave text-success"></i> توصيل: ${order.deliveryFee} ج.م</span> </div> ${actionHtml} </div>`;
     }).join('');
 }
 
@@ -687,13 +780,13 @@ async function rateDriver(orderId, rating) {
 // ==========================================
 
 function initDriverDashboard() {
-    navTo('screen-driver');
+    window.navTo('screen-driver');
     document.getElementById('driver-header-name').innerText = state.currentUser.name;
     document.getElementById('driver-rating-header').innerText = getDriverRating(state.currentUser.id);
     if(state.currentUser.commissionOwed !== undefined) {
         document.getElementById('driver-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
     }
-    switchDriverTab('feed');
+    window.switchDriverTab('feed');
 }
 
 function switchDriverTab(tab) {
@@ -703,18 +796,23 @@ function switchDriverTab(tab) {
     document.getElementById('btn-driver-feed').classList.toggle('text-gray-400', tab !== 'feed');
     document.getElementById('btn-driver-tasks').classList.toggle('text-primary', tab === 'tasks');
     document.getElementById('btn-driver-tasks').classList.toggle('text-gray-400', tab !== 'tasks');
-    if(tab === 'feed') renderDriverFeed();
-    if(tab === 'tasks') renderDriverTasks();
+    if(tab === 'feed') window.renderDriverFeed();
+    if(tab === 'tasks') window.renderDriverTasks();
 }
 
 function refreshDriverFeed() {
-    renderDriverFeed();
+    window.renderDriverFeed();
     window.showToast('تم تحديث قائمة الطلبات');
 }
 
 function renderDriverFeed() {
     const list = document.getElementById('driver-feed-list');
     if(!list) return;
+
+    if (!state.isOrdersLoaded) {
+        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
+        return;
+    }
     
     const availableOrders = state.orders.filter(o =>
         o.status === 'pending' &&
@@ -778,6 +876,11 @@ async function driverAcceptOrder(orderId) {
 function renderDriverTasks() {
     const list = document.getElementById('driver-tasks-list');
     if(!list) return;
+
+    if (!state.isOrdersLoaded) {
+        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
+        return;
+    }
     
     const myTasks = state.orders.filter(o =>
         (o.driverId === state.currentUser.id && o.status !== 'pending') ||
@@ -786,7 +889,7 @@ function renderDriverTasks() {
     
     if(myTasks.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-400 py-10"><p>ليس لديك أي مشاوير حالياً.</p></div>`;
-        updateActiveTasksBadge();
+        window.updateActiveTasksBadge();
         return;
     }
     
@@ -806,7 +909,7 @@ function renderDriverTasks() {
         }
         return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="font-bold text-primary">+${order.deliveryFee} ج</span> </div> <div class="text-xs text-gray-500 flex gap-4"> <span><i class="fa-solid fa-money-bill-1-wave ml-1"></i>ثمن الأوردر: ${order.orderPrice}</span> </div> ${statusHtml} </div>`;
     }).join('');
-    updateActiveTasksBadge();
+    window.updateActiveTasksBadge();
 }
 
 async function driverCompleteOrder(orderId) {
@@ -848,8 +951,8 @@ function updateActiveTasksBadge() {
 
 function loginAsAdmin() {
     state.currentUser = { role: 'admin', name: 'المدير' };
-    navTo('screen-admin');
-    renderAdminDashboard();
+    window.navTo('screen-admin');
+    window.renderAdminDashboard();
 }
 
 function renderAdminDashboard() {
@@ -934,70 +1037,17 @@ window.showToast = showToast;
 window.initRestaurantDashboard = initRestaurantDashboard;
 window.initDriverDashboard = initDriverDashboard;
 window.updateDynamicUI = updateDynamicUI;
+window.renderRestOrders = renderRestOrders;
+window.renderDriverFeed = renderDriverFeed;
+window.renderDriverTasks = renderDriverTasks;
+window.renderAdminDashboard = renderAdminDashboard;
+window.updateActiveTasksBadge = updateActiveTasksBadge;
 
+import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+window.deleteOrder = deleteOrder;
 
-// ==========================================
-// التهيئة السريعة (Fast Init) - حل مشكلة شاشة التحميل
-// ==========================================
-function fastInit() {
-    // 1. محاولة قراءة الحساب المحفوظ فوراً من ذاكرة الهاتف
-    const savedUserStr = localStorage.getItem('wasel_user');
-    if (savedUserStr) {
-        try { state.currentUser = JSON.parse(savedUserStr); } catch (e) {}
-    }
-
-    // 2. إخفاء شاشة التحميل المزعجة فوراً بدون انتظار فايربيز!
-    const loader = document.getElementById('initial-loader');
-    if (loader) {
-        loader.style.opacity = '0';
-        setTimeout(() => loader.style.display = 'none', 300);
-    }
-
-    // 3. توجيه المستخدم لصفحته في أقل من ثانية
-    if (state.currentUser) {
-        if (state.currentUser.role === 'restaurant') window.initRestaurantDashboard();
-        else if (state.currentUser.role === 'driver') window.initDriverDashboard();
-        else if (state.currentUser.role === 'admin') window.loginAsAdmin();
-    } else {
-        window.navTo('screen-role-select');
-    }
-
-    // 4. أخيراً، الاتصال بفايربيز في الخلفية بهدوء لتحديث البيانات
-    startFirebaseBackgroundSync();
-}
-
-function startFirebaseBackgroundSync() {
-    // الاتصال بصمت، وإذا حدث خطأ لا نجمد شاشة المستخدم
-    signInAnonymously(auth).catch(e => console.error("Auth error:", e));
-
-    const usersCol = collection(db, 'users');
-    const ordersCol = collection(db, 'orders');
-
-    onSnapshot(usersCol, (snapshot) => {
-        state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (state.currentUser && state.currentUser.role !== 'admin') {
-            const updated = state.users.find(u => u.id === state.currentUser.id);
-            if (updated) {
-                state.currentUser = updated;
-                localStorage.setItem('wasel_user', JSON.stringify(updated));
-            }
-        }
-        window.updateDynamicUI();
-    }, (error) => console.error("Users sync error:", error));
-
-    onSnapshot(ordersCol, (snapshot) => {
-        state.orders = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-            completedAt: doc.data().completedAt?.toDate() || null
-        }));
-        window.updateDynamicUI();
-    }, (error) => console.error("Orders sync error:", error));
-}
-
-// بدء التشغيل فوراً بمجرد قراءة الكود
-fastInit();
+// بدء التشغيل
+initFirebase();
 
 </script>
 </body>
