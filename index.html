@@ -1,9 +1,9 @@
-
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>منصة توصيل الطلبات</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -27,7 +27,7 @@ danger: '#F44336'
 }
 </script>
 <style>
-body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Tajawal', sans-serif; background-color: #f3f4f6; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .toast-enter { transform: translateY(100%); opacity: 0; }
@@ -43,7 +43,6 @@ position: relative;
 box-shadow: 0 0 20px rgba(0,0,0,0.1);
 display: flex;
 flex-direction: column;
-overflow-x: hidden;
 }
 .main-content {
 flex: 1;
@@ -57,60 +56,53 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </head>
 <body class="bg-gray-100 text-gray-800">
 <!-- شاشة تحميل مبدئية لمنع ومضة الشاشة الرئيسية عند الريفرش -->
-<div id="initial-loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
+<div id="initial-loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
 <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mb-4 shadow-lg shadow-primary/40 animate-pulse">
 <i class="fa-solid fa-motorcycle text-4xl text-white"></i>
 </div>
-<p class="text-secondary font-bold text-lg">جاري تحميل البيانات...</p>
+<p class="text-secondary font-bold text-lg">جاري التحميل...</p>
 </div>
-
 <!-- Toast Notification Container -->
 <div id="toast-container" class="fixed bottom-20 left-0 right-0 z-50 flex flex-col items-center pointer-events-none space-y-2"></div>
-
 <!-- نافذة تعديل تكلفة التوصيل (Modal) -->
 <div id="edit-fee-modal" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
 <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl transform scale-100 transition-transform">
 <div class="flex justify-between items-center mb-4">
 <h3 class="font-bold text-secondary text-lg">تعديل تكلفة التوصيل</h3>
-<button onclick="window.closeFeeModal()" class="text-gray-400 hover:text-danger cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
+<button onclick="window.closeFeeModal()" class="text-gray-400 hover:text-danger"><i class="fa-solid fa-xmark text-xl"></i></button>
 </div>
 <p class="text-xs text-gray-500 mb-3">أدخل التكلفة الجديدة لجذب المناديب لقبول الطلب:</p>
 <div class="relative mb-5">
 <input type="number" id="new-fee-input" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="0">
 <span class="absolute left-4 top-3.5 text-gray-400 text-sm">ج.م</span>
 </div>
-<button onclick="window.saveNewFee()" class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/30 active:scale-95 transition cursor-pointer">حفظ التعديل</button>
+<button onclick="window.saveNewFee()" class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/30 active:scale-95 transition">حفظ التعديل</button>
 </div>
 </div>
-
-<div class="app-container" id="app">
+<div class="app-container">
 <!-- 1. شاشة اختيار الدور -->
-<div id="screen-role-select" class="hidden flex-col h-screen justify-center items-center p-6 bg-white relative">
+<div id="screen-role-select" class="hidden flex-col h-screen justify-center items-center p-6 bg-white">
 <div class="w-32 h-32 bg-primary rounded-full flex items-center justify-center mb-8 shadow-lg shadow-primary/40">
 <i class="fa-solid fa-motorcycle text-6xl text-white"></i>
 </div>
 <h1 class="text-3xl font-bold text-secondary mb-2">وصل دليفري</h1>
 <p class="text-gray-500 mb-10 text-center">المنصة الأسرع لربط المطاعم بمندوبي التوصيل</p>
 <div class="w-full space-y-4">
-<button onclick="window.navTo('screen-login', {role: 'restaurant'})" class="w-full bg-secondary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 cursor-pointer shadow-md">
+<button onclick="window.navTo('screen-login', {role: 'restaurant'})" class="w-full bg-secondary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95">
 <i class="fa-solid fa-store"></i> دخول كمطعم
 </button>
-<button onclick="window.navTo('screen-login', {role: 'driver'})" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 cursor-pointer shadow-md shadow-primary/30">
+<button onclick="window.navTo('screen-login', {role: 'driver'})" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95">
 <i class="fa-solid fa-helmet-safety"></i> دخول كمندوب
 </button>
-<button onclick="window.loginAsAdmin()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 cursor-pointer mt-4">
+<button onclick="window.loginAsAdmin()" class="w-full bg-gray-100 text-gray-600 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition active:scale-95 mt-4">
 <i class="fa-solid fa-user-tie"></i> لوحة الإدارة
 </button>
 </div>
-<div class="absolute bottom-4 text-gray-300 text-xs font-bold text-center w-full">
-(الإصدار 3.3 - المزامنة المستقرة)
 </div>
-</div>
-
 <!-- 2. شاشة تسجيل الدخول -->
 <div id="screen-login" class="hidden flex-col h-screen bg-white">
 <div class="p-6">
-<button onclick="window.navTo('screen-role-select')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 cursor-pointer active:scale-95">
+<button onclick="window.navTo('screen-role-select')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6">
 <i class="fa-solid fa-arrow-right"></i>
 </button>
 <h2 id="login-title" class="text-2xl font-bold text-secondary mb-6">تسجيل الدخول</h2>
@@ -123,18 +115,17 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
 <input type="password" id="login-password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="••••••••">
 </div>
-<button onclick="window.processLogin()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-primary/30 active:scale-95 transition cursor-pointer">دخول</button>
+<button onclick="window.processLogin()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-primary/30 active:scale-95 transition">دخول</button>
 <div class="text-center mt-6">
-<p class="text-gray-500">ليس لديك حساب؟ <button onclick="window.toggleRegisterForm()" class="text-primary font-bold cursor-pointer">سجل الآن</button></p>
+<p class="text-gray-500">ليس لديك حساب؟ <button onclick="window.toggleRegisterForm()" class="text-primary font-bold">سجل الآن</button></p>
 </div>
 </div>
 </div>
 </div>
-
 <!-- شاشة التسجيل (للمندوب والمطعم) -->
 <div id="screen-register" class="hidden flex-col h-screen bg-white overflow-y-auto">
 <div class="p-6 pb-20">
-<button onclick="window.toggleRegisterForm()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6 cursor-pointer active:scale-95">
+<button onclick="window.toggleRegisterForm()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-6">
 <i class="fa-solid fa-arrow-right"></i>
 </button>
 <h2 id="register-title" class="text-2xl font-bold text-secondary mb-6">إنشاء حساب جديد</h2>
@@ -171,11 +162,10 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 <input type="file" accept="image/*" class="w-full text-sm">
 </div>
 </div>
-<button onclick="window.processRegister()" class="w-full bg-secondary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-secondary/30 active:scale-95 transition cursor-pointer">تسجيل وإرسال للمراجعة</button>
+<button onclick="window.processRegister()" class="w-full bg-secondary text-white py-3.5 rounded-xl font-bold text-lg mt-4 shadow-lg shadow-secondary/30 active:scale-95 transition">تسجيل وإرسال للمراجعة</button>
 </div>
 </div>
 </div>
-
 <!-- 3. شاشة المطعم -->
 <div id="screen-restaurant" class="hidden flex-col h-screen">
 <div class="bg-white px-4 py-4 flex justify-between items-center shadow-sm z-10">
@@ -183,7 +173,7 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 <h2 class="font-bold text-lg text-secondary" id="rest-header-name">مطعم</h2>
 <p class="text-xs text-gray-500">رصيد العمولات المستحقة: <span id="rest-commission" class="font-bold text-danger">0</span> ج.م</p>
 </div>
-<button onclick="window.logout()" class="text-gray-400 hover:text-danger cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button onclick="window.logout()" class="text-gray-400 hover:text-danger"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 <div class="main-content bg-gray-100 p-4" id="rest-content">
 <!-- تبويب إضافة طلب (منشور) -->
@@ -232,7 +222,7 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </label>
 </div>
 </div>
-<button onclick="window.postOrder()" class="w-full bg-primary text-white py-3 rounded-xl font-bold mt-2 shadow-md shadow-primary/20 active:scale-95 transition cursor-pointer"><i class="fa-solid fa-paper-plane ml-1"></i> نشر الطلب</button>
+<button onclick="window.postOrder()" class="w-full bg-primary text-white py-3 rounded-xl font-bold mt-2 shadow-md shadow-primary/20 active:scale-95 transition"><i class="fa-solid fa-paper-plane ml-1"></i> نشر الطلب</button>
 <p class="text-[10px] text-gray-400 text-center">* سيتم خصم عمولة 2.5 ج.م عند اكتمال التوصيل.</p>
 </div>
 </div>
@@ -246,17 +236,16 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </div>
 </div>
 <div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10">
-<button onclick="window.switchRestTab('post')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-post">
+<button onclick="window.switchRestTab('post')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition" id="btn-rest-post">
 <i class="fa-solid fa-plus-circle text-xl mb-1"></i>
 <span class="text-xs font-bold">إضافة طلب</span>
 </button>
-<button onclick="window.switchRestTab('orders')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg transition cursor-pointer" id="btn-rest-orders">
+<button onclick="window.switchRestTab('orders')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg transition" id="btn-rest-orders">
 <i class="fa-solid fa-clipboard-list text-xl mb-1"></i>
 <span class="text-xs font-bold">متابعة الطلبات</span>
 </button>
 </div>
 </div>
-
 <!-- 4. شاشة المندوب -->
 <div id="screen-driver" class="hidden flex-col h-screen">
 <div class="bg-white px-4 py-4 flex justify-between items-center shadow-sm z-10">
@@ -272,14 +261,14 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 <p class="text-[11px] text-gray-500">عمولات مستحقة للموقع: <span id="driver-commission" class="font-bold text-danger">0</span> ج.م</p>
 </div>
 </div>
-<button onclick="window.logout()" class="text-gray-400 hover:text-danger cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button onclick="window.logout()" class="text-gray-400 hover:text-danger"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 <div class="main-content bg-gray-100 p-4" id="driver-content">
 <!-- تبويب الطلبات المتاحة (Feed) -->
 <div id="driver-tab-feed" class="space-y-4">
 <div class="flex justify-between items-center mb-2">
 <h3 class="font-bold text-secondary">الطلبات المتاحة الآن</h3>
-<button onclick="window.refreshDriverFeed()" class="text-primary text-sm font-bold active:scale-95 transition cursor-pointer"><i class="fa-solid fa-rotate-right"></i> تحديث</button>
+<button onclick="window.refreshDriverFeed()" class="text-primary text-sm font-bold active:scale-95 transition"><i class="fa-solid fa-rotate-right"></i> تحديث</button>
 </div>
 <div id="driver-feed-list" class="space-y-4">
 <!-- Rendered via JS -->
@@ -294,23 +283,22 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </div>
 </div>
 <div class="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-<button onclick="window.switchDriverTab('feed')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition cursor-pointer" id="btn-driver-feed">
+<button onclick="window.switchDriverTab('feed')" class="flex flex-col items-center p-2 text-primary w-1/2 rounded-lg transition" id="btn-driver-feed">
 <i class="fa-solid fa-house text-xl mb-1"></i>
 <span class="text-xs font-bold">الرئيسية</span>
 </button>
-<button onclick="window.switchDriverTab('tasks')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg relative transition cursor-pointer" id="btn-driver-tasks">
+<button onclick="window.switchDriverTab('tasks')" class="flex flex-col items-center p-2 text-gray-400 w-1/2 rounded-lg relative transition" id="btn-driver-tasks">
 <i class="fa-solid fa-motorcycle text-xl mb-1"></i>
 <span class="text-xs font-bold">مشاويري</span>
 <span id="active-tasks-badge" class="hidden absolute top-1 right-1/4 bg-danger text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">1</span>
 </button>
 </div>
 </div>
-
 <!-- 5. لوحة الإدارة -->
 <div id="screen-admin" class="hidden flex-col h-screen bg-gray-50">
 <div class="bg-secondary text-white px-4 py-4 flex justify-between items-center shadow-md z-10">
 <h2 class="font-bold text-lg"><i class="fa-solid fa-shield-halved ml-2 text-primary"></i>لوحة تحكم الإدارة</h2>
-<button onclick="window.logout()" class="text-gray-300 hover:text-white cursor-pointer"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
+<button onclick="window.logout()" class="text-gray-300 hover:text-white"><i class="fa-solid fa-right-from-bracket text-xl"></i></button>
 </div>
 <div class="main-content p-4">
 <div class="grid grid-cols-2 gap-3 mb-6">
@@ -357,21 +345,17 @@ border: none; background: #FF5722; color: white; padding: 8px 16px; border-radiu
 </div>
 </div>
 </div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const COMMISSION_RATE = 2.5;
-
 let state = {
     currentUser: null,
     currentRoleSelecting: null,
     users: [],
-    orders: [],
-    isOrdersLoaded: false,
-    isUsersLoaded: false
+    orders: []
 };
 
 const firebaseConfig = {
@@ -388,53 +372,34 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 let usersCol, ordersCol;
 
-// ==========================================
-// الدوال الرئيسية للواجهة
-// ==========================================
-
-function checkDataLoaded() {
-    // Only attempt to render data if both users and orders have returned from Firestore
-    // This prevents the "empty array" flash that happens on initial onSnapshot connection
-    if (state.isOrdersLoaded && state.isUsersLoaded) {
-        window.updateDynamicUI();
-        
-        // Hide loader safely
-        const loader = document.getElementById('initial-loader');
-        if (loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 300);
-        }
-
-        // Navigate user if they are logged in
-        if(state.currentUser) {
-            if(state.currentUser.role === 'restaurant') window.initRestaurantDashboard();
-            else if(state.currentUser.role === 'driver') window.initDriverDashboard();
-            else if(state.currentUser.role === 'admin') window.loginAsAdmin();
-        } else {
-            window.navTo('screen-role-select');
-        }
-    }
-}
-
 async function initFirebase() {
     try {
-        // Read LocalStorage immediately
-        const savedUserStr = localStorage.getItem('wasel_user');
-        if (savedUserStr) {
-            try { state.currentUser = JSON.parse(savedUserStr); } catch (e) {}
+        // 1. قراءة بيانات المستخدم المحفوظة في الجهاز لتجنب تسجيل الخروج
+        const savedUser = localStorage.getItem('wasel_user');
+        if(savedUser) {
+            state.currentUser = JSON.parse(savedUser);
         }
 
-        // Wait for Anonymous Auth to fully resolve before attaching listeners
-        await signInAnonymously(auth);
+        // 2. إخفاء شاشة التحميل فوراً لكي لا تعلق الشاشة عند المستخدم
+        const loader = document.getElementById('initial-loader');
+        if(loader) loader.style.display = 'none';
 
+        // 3. توجيه المستخدم إلى الشاشة الصحيحة
+        if(state.currentUser) {
+            if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
+            else if(state.currentUser.role === 'driver') initDriverDashboard();
+            else if(state.currentUser.role === 'admin') loginAsAdmin();
+        } else {
+            navTo('screen-role-select');
+        }
+
+        // 4. الاتصال بقاعدة البيانات في الخلفية بدون تعطيل الشاشة
+        await signInAnonymously(auth);
         usersCol = collection(db, 'users');
         ordersCol = collection(db, 'orders');
 
         onSnapshot(usersCol, (snapshot) => {
             state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            state.isUsersLoaded = true;
-            
-            // Sync current user with latest DB data if exists
             if(state.currentUser && state.currentUser.role !== 'admin') {
                 const updated = state.users.find(u => u.id === state.currentUser.id);
                 if(updated) {
@@ -442,7 +407,7 @@ async function initFirebase() {
                     localStorage.setItem('wasel_user', JSON.stringify(updated));
                 }
             }
-            checkDataLoaded();
+            updateDynamicUI();
         }, (error) => console.error("Users sync error:", error));
 
         onSnapshot(ordersCol, (snapshot) => {
@@ -452,39 +417,45 @@ async function initFirebase() {
                 createdAt: doc.data().createdAt?.toDate() || new Date(),
                 completedAt: doc.data().completedAt?.toDate() || null
             }));
-            state.isOrdersLoaded = true;
-            checkDataLoaded();
+            updateDynamicUI();
         }, (error) => console.error("Orders sync error:", error));
 
     } catch (e) {
-        console.error("Firebase Auth Error:", e);
-        // Fallback if network fails completely
+        console.error("Firebase Init Error:", e);
         const loader = document.getElementById('initial-loader');
-        if (loader) loader.style.display = 'none';
-        window.navTo('screen-role-select');
-        window.showToast('فشل الاتصال بقاعدة البيانات. تأكد من اتصال الإنترنت.', 'error');
+        if(loader) loader.style.display = 'none';
+        if (!state.currentUser) navTo('screen-role-select');
+        showToast('حدث خطأ في الاتصال بالشبكة', 'error');
     }
 }
+initFirebase();
+
+const getDriverRating = (driverId) => {
+    const driver = state.users.find(u => u.id === driverId);
+    if (!driver || !driver.ratings || driver.ratings.length === 0) return (5.0).toFixed(1);
+    const sum = driver.ratings.reduce((a, b) => a + b, 0);
+    return (sum / driver.ratings.length).toFixed(1);
+};
+const getRestaurant = (id) => state.users.find(u => u.id === id);
+const getDriver = (id) => state.users.find(u => u.id === id);
 
 function updateDynamicUI() {
     if(!state.currentUser) return;
     const driverComm = document.getElementById('driver-commission');
-    if(driverComm && state.currentUser.role === 'driver' && state.currentUser.commissionOwed !== undefined) 
-        driverComm.innerText = state.currentUser.commissionOwed.toFixed(2);
-    
+    if(driverComm && state.currentUser.role === 'driver') driverComm.innerText = state.currentUser.commissionOwed.toFixed(2);
     const restComm = document.getElementById('rest-commission');
-    if(restComm && state.currentUser.role === 'restaurant' && state.currentUser.commissionOwed !== undefined) 
-        restComm.innerText = state.currentUser.commissionOwed.toFixed(2);
-    
+    if(restComm && state.currentUser.role === 'restaurant') restComm.innerText = state.currentUser.commissionOwed.toFixed(2);
     const driverRating = document.getElementById('driver-rating-header');
-    if(driverRating && state.currentUser.role === 'driver') 
-        driverRating.innerText = getDriverRating(state.currentUser.id);
+    if(driverRating && state.currentUser.role === 'driver') driverRating.innerText = getDriverRating(state.currentUser.id);
     
-    if(state.currentUser.role === 'restaurant') window.renderRestOrders();
-    else if(state.currentUser.role === 'driver') {
-        window.renderDriverFeed();
-        window.renderDriverTasks();
-    } else if(state.currentUser.role === 'admin') window.renderAdminDashboard();
+    if(state.currentUser.role === 'restaurant') {
+        renderRestOrders();
+    } else if(state.currentUser.role === 'driver') {
+        renderDriverFeed();
+        renderDriverTasks();
+    } else if(state.currentUser.role === 'admin') {
+        renderAdminDashboard();
+    }
 }
 
 function navTo(screenId, params = {}) {
@@ -537,24 +508,23 @@ function toggleRegisterForm() {
 }
 
 function processLogin() {
-    const phone = document.getElementById('login-phone').value;
-    const pass = document.getElementById('login-password').value;
-    if(phone === 'admin' && pass === 'admin') { window.loginAsAdmin(); return; }
-    
     if (state.users.length === 0) {
-        window.showToast('جاري الاتصال بقاعدة البيانات، يرجى المحاولة بعد ثانية...', 'error');
+        showToast('جاري الاتصال بالشبكة، يرجى المحاولة بعد ثانية...', 'error');
         return;
     }
-
+    const phone = document.getElementById('login-phone').value;
+    const pass = document.getElementById('login-password').value;
+    if(phone === 'admin' && pass === 'admin') { loginAsAdmin(); return; }
+    
     const user = state.users.find(u => u.phone === phone && u.password === pass && u.role === state.currentRoleSelecting);
     if(user) {
         state.currentUser = user;
         localStorage.setItem('wasel_user', JSON.stringify(user));
-        window.showToast('تم تسجيل الدخول بنجاح');
-        if(user.role === 'restaurant') window.initRestaurantDashboard();
-        else window.initDriverDashboard();
+        showToast('تم تسجيل الدخول بنجاح');
+        if(user.role === 'restaurant') initRestaurantDashboard();
+        else initDriverDashboard();
     } else {
-        window.showToast('البيانات غير صحيحة، يرجى التأكد من الرقم السري.', 'error');
+        showToast('البيانات غير صحيحة، يرجى التأكد من الرقم السري أو إنشاء حساب جديد.', 'error');
     }
 }
 
@@ -562,14 +532,14 @@ async function processRegister() {
     const name = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-password').value;
-    if(!name || !phone || !password) { window.showToast('يرجى إدخال البيانات الأساسية وكلمة المرور', 'error'); return; }
+    if(!name || !phone || !password) { showToast('يرجى إدخال البيانات الأساسية وكلمة المرور', 'error'); return; }
     const btn = document.querySelector('button[onclick="window.processRegister()"]');
     if(btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
         btn.disabled = true;
     }
     try {
-        await addDoc(collection(db, 'users'), {
+        await addDoc(usersCol, {
             role: state.currentRoleSelecting,
             name: name,
             phone: phone,
@@ -577,13 +547,13 @@ async function processRegister() {
             commissionOwed: 0,
             ...(state.currentRoleSelecting === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {})
         });
-        window.showToast('تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن.');
-        window.toggleRegisterForm();
+        showToast('تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن.');
+        toggleRegisterForm();
         document.getElementById('reg-name').value = '';
         document.getElementById('reg-phone').value = '';
         document.getElementById('reg-password').value = '';
     } catch(e) {
-        window.showToast('حدث خطأ أثناء التسجيل.', 'error');
+        showToast('حدث خطأ أثناء التسجيل.', 'error');
         console.error(e);
     } finally {
         if(btn) {
@@ -596,21 +566,15 @@ async function processRegister() {
 function logout() {
     state.currentUser = null;
     localStorage.removeItem('wasel_user');
-    window.navTo('screen-role-select');
+    navTo('screen-role-select');
 }
 
-// ==========================================
-// دوال المطعم
-// ==========================================
-
 function initRestaurantDashboard() {
-    window.navTo('screen-restaurant');
+    navTo('screen-restaurant');
     document.getElementById('rest-header-name').innerText = state.currentUser.name;
-    if(state.currentUser.commissionOwed !== undefined) {
-        document.getElementById('rest-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
-    }
-    window.switchRestTab('post');
-    window.renderRestOrders();
+    document.getElementById('rest-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
+    switchRestTab('post');
+    renderRestOrders();
 }
 
 function switchRestTab(tab) {
@@ -620,7 +584,7 @@ function switchRestTab(tab) {
     document.getElementById('btn-rest-post').classList.toggle('text-gray-400', tab !== 'post');
     document.getElementById('btn-rest-orders').classList.toggle('text-primary', tab === 'orders');
     document.getElementById('btn-rest-orders').classList.toggle('text-gray-400', tab !== 'orders');
-    if(tab === 'orders') window.renderRestOrders();
+    if(tab === 'orders') renderRestOrders();
 }
 
 async function postOrder() {
@@ -629,26 +593,26 @@ async function postOrder() {
     const fee = parseFloat(document.getElementById('delivery-fee').value);
     const phone = document.getElementById('customer-phone').value;
     const vehicle = document.querySelector('input[name="vehicle"]:checked').value;
-    if(!type || !price || !fee || !phone) { window.showToast('يرجى ملء جميع الحقول المطلوبة', 'error'); return; }
+    if(!type || !price || !fee || !phone) { showToast('يرجى ملء جميع الحقول المطلوبة', 'error'); return; }
     const btn = document.querySelector('button[onclick="window.postOrder()"]');
     if(btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري النشر...';
         btn.disabled = true;
     }
     try {
-        await addDoc(collection(db, 'orders'), {
+        await addDoc(ordersCol, {
             restaurantId: state.currentUser.id,
             type, vehicleType: vehicle, deliveryFee: fee, orderPrice: price, contactPhone: phone,
             status: 'pending', driverId: null, applyingDrivers: [], createdAt: new Date()
         });
-        window.showToast('تم نشر طلبك بنجاح في صفحة الطلبات المتاحة للمناديب!');
+        showToast('تم نشر طلبك بنجاح في صفحة الطلبات المتاحة للمناديب!');
         document.getElementById('order-type').value = '';
         document.getElementById('order-price').value = '';
         document.getElementById('delivery-fee').value = '';
         document.getElementById('customer-phone').value = '';
-        window.switchRestTab('orders');
+        switchRestTab('orders');
     } catch(e) {
-        window.showToast('حدث خطأ أثناء النشر', 'error');
+        showToast('حدث خطأ أثناء النشر', 'error');
     } finally {
         if(btn) {
             btn.innerHTML = '<i class="fa-solid fa-paper-plane ml-1"></i> نشر الطلب';
@@ -657,39 +621,18 @@ async function postOrder() {
     }
 }
 
-async function deleteOrder(orderId) {
-    if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
-        try {
-            await deleteDoc(doc(db, 'orders', orderId));
-            window.showToast('تم حذف الطلب بنجاح');
-        } catch(e) {
-            window.showToast('حدث خطأ أثناء الحذف', 'error');
-        }
-    }
-}
-
 function renderRestOrders() {
     const list = document.getElementById('rest-orders-list');
-    if(!list) return;
-    
-    // Safety check ensuring data is loaded before mapping
-    if (!state.isOrdersLoaded) {
-        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
-        return;
-    }
-
     const myOrders = state.orders.filter(o => o.restaurantId === state.currentUser.id).sort((a,b) => b.createdAt - a.createdAt);
     if(myOrders.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-box-open text-4xl mb-2"></i><p>لا توجد طلبات حالياً</p></div>`;
         return;
     }
-    
     list.innerHTML = myOrders.map(order => {
         let statusBadge = '';
         let actionHtml = '';
         const shortId = order.id.substring(0,4);
         const hasApplicants = order.applyingDrivers && order.applyingDrivers.length > 0;
-        
         if(order.status === 'pending') {
             if(hasApplicants) {
                 statusBadge = `<span class="bg-orange-100 text-orange-600 text-[10px] px-2 py-1 rounded-full font-bold">متقدمين (${order.applyingDrivers.length})</span>`;
@@ -698,12 +641,12 @@ function renderRestOrders() {
                     if(!driver) return '';
                     const rating = getDriverRating(driver.id);
                     const stars = getStarHtml(rating);
-                    return `<div class="border border-orange-200 bg-orange-50 rounded-lg p-2 mb-2"> <div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-100 mb-2"> <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden"><i class="fa-solid fa-user text-gray-400"></i></div> <div class="flex-1"> <p class="font-bold text-sm text-secondary">${driver.name}</p> <div class="text-[10px] text-gray-500 flex items-center gap-1">${stars} <span class="font-bold text-black ml-1">${rating}</span> (${driver.vehicle === 'motorcycle'?'موتوسيكل':'سيارة'})</div> </div> </div> <div class="flex gap-2"> <button onclick="window.restApproveDriver('${order.id}', '${driver.id}')" class="flex-1 bg-success text-white py-1.5 rounded-lg text-xs font-bold active:scale-95 transition cursor-pointer"><i class="fa-solid fa-check"></i> اختيار</button> <button onclick="window.restRejectDriver('${order.id}', '${driver.id}')" class="flex-1 bg-red-100 text-danger py-1.5 rounded-lg text-xs font-bold active:scale-95 transition cursor-pointer"><i class="fa-solid fa-xmark"></i> رفض</button> </div> </div>`;
+                    return `<div class="border border-orange-200 bg-orange-50 rounded-lg p-2 mb-2"> <div class="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-100 mb-2"> <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden"><i class="fa-solid fa-user text-gray-400"></i></div> <div class="flex-1"> <p class="font-bold text-sm text-secondary">${driver.name}</p> <div class="text-[10px] text-gray-500 flex items-center gap-1">${stars} <span class="font-bold text-black ml-1">${rating}</span> (${driver.vehicle === 'motorcycle'?'موتوسيكل':'سيارة'})</div> </div> </div> <div class="flex gap-2"> <button onclick="window.restApproveDriver('${order.id}', '${driver.id}')" class="flex-1 bg-success text-white py-1.5 rounded-lg text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-check"></i> اختيار</button> <button onclick="window.restRejectDriver('${order.id}', '${driver.id}')" class="flex-1 bg-red-100 text-danger py-1.5 rounded-lg text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-xmark"></i> رفض</button> </div> </div>`;
                 }).join('');
                 actionHtml = `<div class="mt-3"> <p class="text-xs text-orange-800 mb-2 font-bold">مناديب يرغبون في التوصيل (اختر الأنسب):</p> ${applicantsHtml} </div>`;
             } else {
                 statusBadge = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-full font-bold">جاري البحث عن مندوب...</span>`;
-                actionHtml = `<div class="mt-3 bg-blue-50 text-blue-800 p-2 text-xs rounded-lg flex items-center gap-2"> <i class="fa-solid fa-spinner fa-spin"></i> المنشور قيد العرض للمناديب </div> <div class="mt-2 text-left"><button onclick="window.editDeliveryFee('${order.id}')" class="text-primary text-xs font-bold underline cursor-pointer"><i class="fa-solid fa-pen mr-1"></i> تعديل تكلفة التوصيل؟</button></div>`;
+                actionHtml = `<div class="mt-3 bg-blue-50 text-blue-800 p-2 text-xs rounded-lg flex items-center gap-2"> <i class="fa-solid fa-spinner fa-spin"></i> المنشور قيد العرض للمناديب </div> <div class="mt-2 text-left"><button onclick="window.editDeliveryFee('${order.id}')" class="text-primary text-xs font-bold underline"><i class="fa-solid fa-pen mr-1"></i> تعديل تكلفة التوصيل؟</button></div>`;
             }
         } else if(order.status === 'active') {
             const driver = getDriver(order.driverId);
@@ -712,12 +655,12 @@ function renderRestOrders() {
         } else if(order.status === 'completed') {
             statusBadge = `<span class="bg-success/10 text-success text-[10px] px-2 py-1 rounded-full font-bold">مكتمل</span>`;
             if(!order.rated) {
-                actionHtml = `<div class="mt-3 border border-gray-200 rounded-lg p-3 text-center"> <p class="text-xs text-gray-600 mb-2 font-bold">قيّم سرعة المندوب:</p> <div class="flex justify-center gap-3"> <button onclick="window.rateDriver('${order.id}', 5)" class="w-12 h-12 rounded-full bg-green-50 text-success text-xl hover:bg-green-100 transition cursor-pointer"><i class="fa-solid fa-thumbs-up"></i></button> <button onclick="window.rateDriver('${order.id}', 1)" class="w-12 h-12 rounded-full bg-red-50 text-danger text-xl hover:bg-red-100 transition cursor-pointer"><i class="fa-solid fa-thumbs-down"></i></button> </div> <p class="text-[10px] text-gray-400 mt-2">سريع (خلال 10 دقائق) / بطيء</p> </div>`;
+                actionHtml = `<div class="mt-3 border border-gray-200 rounded-lg p-3 text-center"> <p class="text-xs text-gray-600 mb-2 font-bold">قيّم سرعة المندوب:</p> <div class="flex justify-center gap-3"> <button onclick="window.rateDriver('${order.id}', 5)" class="w-12 h-12 rounded-full bg-green-50 text-success text-xl hover:bg-green-100 transition"><i class="fa-solid fa-thumbs-up"></i></button> <button onclick="window.rateDriver('${order.id}', 1)" class="w-12 h-12 rounded-full bg-red-50 text-danger text-xl hover:bg-red-100 transition"><i class="fa-solid fa-thumbs-down"></i></button> </div> <p class="text-[10px] text-gray-400 mt-2">سريع (خلال 10 دقائق) / بطيء</p> </div>`;
             } else {
                 actionHtml = `<div class="mt-3 text-center text-xs text-success bg-green-50 py-2 rounded-lg"><i class="fa-solid fa-check-circle"></i> تم التقييم وإنهاء العملية</div>`;
             }
         }
-        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3 relative"> <div class="flex justify-between items-start mb-2"> <div> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock"></i> ${formatTimeAgo(order.createdAt)}</span> </div> <div class="flex flex-col items-end gap-1"> ${statusBadge} ${order.status === 'pending' ? `<button onclick="window.deleteOrder('${order.id}')" class="text-[10px] text-danger underline"><i class="fa-solid fa-trash"></i> حذف الطلب</button>` : ''}</div></div> <div class="flex gap-4 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg mb-2"> <span><i class="fa-solid fa-motorcycle text-primary"></i> ${order.vehicleType === 'motorcycle' ? 'موتوسيكل' : order.vehicleType === 'car' ? 'سيارة' : 'أي مركبة'}</span> <span><i class="fa-solid fa-money-bill-wave text-success"></i> توصيل: ${order.deliveryFee} ج.م</span> </div> ${actionHtml} </div>`;
+        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"> <div class="flex justify-between items-start mb-2"> <div> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="text-[10px] text-gray-400"><i class="fa-regular fa-clock"></i> ${formatTimeAgo(order.createdAt)}</span> </div> ${statusBadge} </div> <div class="flex gap-4 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg mb-2"> <span><i class="fa-solid fa-motorcycle text-primary"></i> ${order.vehicleType === 'motorcycle' ? 'موتوسيكل' : order.vehicleType === 'car' ? 'سيارة' : 'أي مركبة'}</span> <span><i class="fa-solid fa-money-bill-wave text-success"></i> توصيل: ${order.deliveryFee} ج.م</span> </div> ${actionHtml} </div>`;
     }).join('');
 }
 
@@ -741,17 +684,21 @@ async function saveNewFee() {
     if(newFee && !isNaN(newFee) && parseFloat(newFee) > 0) {
         const orderRef = doc(db, 'orders', editingOrderId);
         await updateDoc(orderRef, { deliveryFee: parseFloat(newFee) });
-        window.showToast('تم تحديث تكلفة التوصيل بنجاح!');
-        window.closeFeeModal();
+        showToast('تم تحديث تكلفة التوصيل بنجاح!');
+        closeFeeModal();
     } else {
-        window.showToast('يرجى إدخال مبلغ صحيح', 'error');
+        showToast('يرجى إدخال مبلغ صحيح', 'error');
     }
 }
 
 async function restApproveDriver(orderId, driverId) {
     const orderRef = doc(db, 'orders', orderId);
-    await updateDoc(orderRef, { status: 'active', driverId: driverId, applyingDrivers: [] });
-    window.showToast('تم اختيار المندوب بنجاح! سيتم تنبيه المندوب للتوجه إليك.');
+    await updateDoc(orderRef, {
+        status: 'active',
+        driverId: driverId,
+        applyingDrivers: []
+    });
+    showToast('تم اختيار المندوب بنجاح! سيتم تنبيه المندوب للتوجه إليك.');
 }
 
 async function restRejectDriver(orderId, driverId) {
@@ -760,7 +707,7 @@ async function restRejectDriver(orderId, driverId) {
     const newApplicants = (order.applyingDrivers || []).filter(id => id !== driverId);
     const orderRef = doc(db, 'orders', orderId);
     await updateDoc(orderRef, { applyingDrivers: newApplicants });
-    window.showToast('تم رفض المندوب، المنشور ما زال متاحاً لمناديب آخرين.');
+    showToast('تم رفض المندوب، المنشور ما زال متاحاً لمناديب آخرين.');
 }
 
 async function rateDriver(orderId, rating) {
@@ -772,21 +719,15 @@ async function rateDriver(orderId, rating) {
         const updatedRatings = driver.ratings ? [...driver.ratings, rating] : [rating];
         await updateDoc(doc(db, 'users', driver.id), { ratings: updatedRatings });
     }
-    window.showToast('شكراً لتقييمك!');
+    showToast('شكراً لتقييمك!');
 }
 
-// ==========================================
-// دوال المندوب
-// ==========================================
-
 function initDriverDashboard() {
-    window.navTo('screen-driver');
+    navTo('screen-driver');
     document.getElementById('driver-header-name').innerText = state.currentUser.name;
     document.getElementById('driver-rating-header').innerText = getDriverRating(state.currentUser.id);
-    if(state.currentUser.commissionOwed !== undefined) {
-        document.getElementById('driver-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
-    }
-    window.switchDriverTab('feed');
+    document.getElementById('driver-commission').innerText = state.currentUser.commissionOwed.toFixed(2);
+    switchDriverTab('feed');
 }
 
 function switchDriverTab(tab) {
@@ -796,24 +737,17 @@ function switchDriverTab(tab) {
     document.getElementById('btn-driver-feed').classList.toggle('text-gray-400', tab !== 'feed');
     document.getElementById('btn-driver-tasks').classList.toggle('text-primary', tab === 'tasks');
     document.getElementById('btn-driver-tasks').classList.toggle('text-gray-400', tab !== 'tasks');
-    if(tab === 'feed') window.renderDriverFeed();
-    if(tab === 'tasks') window.renderDriverTasks();
+    if(tab === 'feed') renderDriverFeed();
+    if(tab === 'tasks') renderDriverTasks();
 }
 
 function refreshDriverFeed() {
-    window.renderDriverFeed();
-    window.showToast('تم تحديث قائمة الطلبات');
+    renderDriverFeed();
+    showToast('تم تحديث قائمة الطلبات');
 }
 
 function renderDriverFeed() {
     const list = document.getElementById('driver-feed-list');
-    if(!list) return;
-
-    if (!state.isOrdersLoaded) {
-        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
-        return;
-    }
-    
     const availableOrders = state.orders.filter(o =>
         o.status === 'pending' &&
         !(o.applyingDrivers && o.applyingDrivers.includes(state.currentUser.id)) &&
@@ -829,7 +763,7 @@ function renderDriverFeed() {
         const rest = getRestaurant(order.restaurantId);
         const timeStr = formatTimeAgo(order.createdAt);
         return `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-3">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-4 border-b border-gray-100 flex items-center justify-between">
         <div class="flex items-center gap-2">
         <div class="w-10 h-10 bg-orange-100 text-primary rounded-full flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-store"></i></div>
@@ -852,7 +786,7 @@ function renderDriverFeed() {
         <p class="font-bold text-primary text-sm">+${order.deliveryFee} ج.م</p>
         </div>
         </div>
-        <button onclick="window.driverAcceptOrder('${order.id}')" class="w-full bg-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md shadow-primary/20 active:scale-95 transition cursor-pointer">
+        <button onclick="window.driverAcceptOrder('${order.id}')" class="w-full bg-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md shadow-primary/20 active:scale-95 transition">
         <i class="fa-solid fa-hand-pointer"></i> أنا جاهز للتوصيل
         </button>
         </div>
@@ -868,20 +802,12 @@ async function driverAcceptOrder(orderId) {
     if (!newApplying.includes(state.currentUser.id)) {
         newApplying.push(state.currentUser.id);
         await updateDoc(doc(db, 'orders', orderId), { applyingDrivers: newApplying });
-        window.showToast('تم إرسال طلبك للمطعم! يرجى انتظار الموافقة من قسم (مشاويري).');
-        window.switchDriverTab('tasks');
+        showToast('تم إرسال طلبك للمطعم! يرجى انتظار الموافقة من قسم (مشاويري).');
     }
 }
 
 function renderDriverTasks() {
     const list = document.getElementById('driver-tasks-list');
-    if(!list) return;
-
-    if (!state.isOrdersLoaded) {
-        list.innerHTML = `<div class="text-center text-gray-400 py-10"><i class="fa-solid fa-spinner fa-spin text-4xl mb-2"></i><p>جاري جلب الطلبات...</p></div>`;
-        return;
-    }
-    
     const myTasks = state.orders.filter(o =>
         (o.driverId === state.currentUser.id && o.status !== 'pending') ||
         (o.status === 'pending' && o.applyingDrivers?.includes(state.currentUser.id))
@@ -889,7 +815,7 @@ function renderDriverTasks() {
     
     if(myTasks.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-400 py-10"><p>ليس لديك أي مشاوير حالياً.</p></div>`;
-        window.updateActiveTasksBadge();
+        updateActiveTasksBadge();
         return;
     }
     
@@ -897,19 +823,21 @@ function renderDriverTasks() {
         const rest = getRestaurant(order.restaurantId);
         const shortId = order.id.substring(0,4);
         let statusHtml = '';
+        
         if(order.status === 'pending' && order.applyingDrivers?.includes(state.currentUser.id)) {
             statusHtml = `<div class="bg-orange-50 text-orange-700 p-3 rounded-lg text-xs mt-3 flex items-center gap-2 border border-orange-100"> <i class="fa-solid fa-hourglass-half fa-spin"></i> في انتظار موافقة المطعم... </div>`;
         } else if(order.status === 'active') {
-            statusHtml = `<div class="bg-primary/10 border border-primary/20 p-3 rounded-lg mt-3"> <p class="text-xs text-primary font-bold mb-2"><i class="fa-solid fa-person-biking ml-1"></i> المطعم اختارك! توجه للمطعم الآن.</p> <p class="text-xs text-gray-600 mb-1">المطعم: <span class="font-bold">${rest?.name || ''}</span></p> <p class="text-xs text-gray-600 mb-3">رقم المطعم: <a href="tel:${order.contactPhone}" class="text-primary font-bold dir-ltr inline-block">${order.contactPhone}</a></p> <button onclick="window.driverCompleteOrder('${order.id}')" class="w-full bg-success text-white py-2.5 rounded-lg text-sm font-bold shadow-md shadow-success/30 active:scale-95 transition cursor-pointer"> <i class="fa-solid fa-hand-holding-dollar ml-1"></i> تم التوصيل واستلام المبلغ </button> </div>`;
+            statusHtml = `<div class="bg-primary/10 border border-primary/20 p-3 rounded-lg mt-3"> <p class="text-xs text-primary font-bold mb-2"><i class="fa-solid fa-person-biking ml-1"></i> المطعم اختارك! توجه للمطعم الآن.</p> <p class="text-xs text-gray-600 mb-1">المطعم: <span class="font-bold">${rest?.name || ''}</span></p> <p class="text-xs text-gray-600 mb-3">رقم المطعم: <a href="tel:${order.contactPhone}" class="text-primary font-bold dir-ltr inline-block">${order.contactPhone}</a></p> <button onclick="window.driverCompleteOrder('${order.id}')" class="w-full bg-success text-white py-2.5 rounded-lg text-sm font-bold shadow-md shadow-success/30 active:scale-95 transition"> <i class="fa-solid fa-hand-holding-dollar ml-1"></i> تم التوصيل واستلام المبلغ </button> </div>`;
         } else if(order.status === 'completed') {
             const endTime = order.completedAt || new Date();
             const timeFormat = new Intl.DateTimeFormat('ar-EG', { hour: 'numeric', minute: 'numeric', hour12: true }).format(endTime);
             const diffMins = Math.max(1, Math.floor((endTime.getTime() - new Date(order.createdAt).getTime()) / 60000));
             statusHtml = `<div class="bg-green-50 border border-green-100 p-3 rounded-lg mt-3"> <div class="flex items-center justify-between mb-2 pb-2 border-b border-green-200/50"> <span class="text-success text-xs font-bold"><i class="fa-solid fa-check-circle ml-1"></i> عملية ناجحة</span> <span class="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-100">${timeFormat}</span> </div> <div class="text-xs text-gray-600 space-y-1.5"> <p><i class="fa-solid fa-store text-gray-400 w-4 ml-1"></i> المطعم: <span class="font-bold">${rest?.name || ''}</span></p> <p><i class="fa-solid fa-stopwatch text-gray-400 w-4 ml-1"></i> استغرق التوصيل: <span class="font-bold text-secondary">${diffMins} دقيقة</span></p> </div> </div>`;
         }
-        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-3"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="font-bold text-primary">+${order.deliveryFee} ج</span> </div> <div class="text-xs text-gray-500 flex gap-4"> <span><i class="fa-solid fa-money-bill-1-wave ml-1"></i>ثمن الأوردر: ${order.orderPrice}</span> </div> ${statusHtml} </div>`;
+        
+        return `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200"> <div class="flex justify-between items-start mb-2"> <h4 class="font-bold text-sm text-secondary">${order.type} <span class="text-[11px] font-normal text-gray-400">(#${shortId})</span></h4> <span class="font-bold text-primary">+${order.deliveryFee} ج</span> </div> <div class="text-xs text-gray-500 flex gap-4"> <span><i class="fa-solid fa-money-bill-1-wave ml-1"></i>ثمن الأوردر: ${order.orderPrice}</span> </div> ${statusHtml} </div>`;
     }).join('');
-    window.updateActiveTasksBadge();
+    updateActiveTasksBadge();
 }
 
 async function driverCompleteOrder(orderId) {
@@ -920,13 +848,13 @@ async function driverCompleteOrder(orderId) {
         completedAt: new Date()
     });
     const driverRef = doc(db, 'users', state.currentUser.id);
-    await updateDoc(driverRef, { commissionOwed: (state.currentUser.commissionOwed || 0) + COMMISSION_RATE });
+    await updateDoc(driverRef, { commissionOwed: state.currentUser.commissionOwed + COMMISSION_RATE });
     const rest = getRestaurant(order.restaurantId);
     if(rest) {
         const restRef = doc(db, 'users', order.restaurantId);
-        await updateDoc(restRef, { commissionOwed: (rest.commissionOwed || 0) + COMMISSION_RATE });
+        await updateDoc(restRef, { commissionOwed: rest.commissionOwed + COMMISSION_RATE });
     }
-    window.showToast('تم تأكيد التوصيل بنجاح وتم تسجيل العمولة. أحسنت!');
+    showToast('تم تأكيد التوصيل بنجاح وتم تسجيل العمولة. أحسنت!');
 }
 
 function updateActiveTasksBadge() {
@@ -945,14 +873,10 @@ function updateActiveTasksBadge() {
     }
 }
 
-// ==========================================
-// الإدارة والأدوات المساعدة
-// ==========================================
-
 function loginAsAdmin() {
     state.currentUser = { role: 'admin', name: 'المدير' };
-    window.navTo('screen-admin');
-    window.renderAdminDashboard();
+    navTo('screen-admin');
+    renderAdminDashboard();
 }
 
 function renderAdminDashboard() {
@@ -967,16 +891,16 @@ function renderAdminDashboard() {
     document.getElementById('admin-total-drivers').innerText = totalDrivers;
     
     const tbody = document.getElementById('admin-orders-table');
-    if(!tbody) return;
-    
     tbody.innerHTML = state.orders.sort((a,b) => b.createdAt - a.createdAt).map(order => {
         const rest = getRestaurant(order.restaurantId)?.name || '-';
         const driver = order.driverId ? getDriver(order.driverId)?.name : '-';
         const shortId = order.id.substring(0,4);
         let statusClass = 'text-gray-500';
         let statusText = 'انتظار';
+        
         if(order.status === 'active') { statusClass = 'text-blue-500'; statusText = 'نشط'; }
         if(order.status === 'completed') { statusClass = 'text-success font-bold'; statusText = 'مكتمل'; }
+        
         return `<tr class="border-b border-gray-50 hover:bg-gray-50"> <td class="px-4 py-3">#${shortId}</td> <td class="px-4 py-3">${rest}</td> <td class="px-4 py-3">${driver}</td> <td class="px-4 py-3 ${statusClass}">${statusText}</td> <td class="px-4 py-3 text-danger">${order.status === 'completed' ? (COMMISSION_RATE*2) : '0'}</td> </tr>`;
     }).join('');
 }
@@ -1002,19 +926,6 @@ function getStarHtml(rating) {
     return html;
 }
 
-const getDriverRating = (driverId) => {
-    const driver = state.users.find(u => u.id === driverId);
-    if (!driver || !driver.ratings || driver.ratings.length === 0) return (5.0).toFixed(1);
-    const sum = driver.ratings.reduce((a, b) => a + b, 0);
-    return (sum / driver.ratings.length).toFixed(1);
-};
-const getRestaurant = (id) => state.users.find(u => u.id === id);
-const getDriver = (id) => state.users.find(u => u.id === id);
-
-
-// ==========================================
-// ربط الدوال بالكائن العام (لضمان عمل الأزرار)
-// ==========================================
 window.navTo = navTo;
 window.toggleRegisterForm = toggleRegisterForm;
 window.processLogin = processLogin;
@@ -1033,22 +944,8 @@ window.switchDriverTab = switchDriverTab;
 window.refreshDriverFeed = refreshDriverFeed;
 window.driverAcceptOrder = driverAcceptOrder;
 window.loginAsAdmin = loginAsAdmin;
-window.showToast = showToast;
-window.initRestaurantDashboard = initRestaurantDashboard;
-window.initDriverDashboard = initDriverDashboard;
-window.updateDynamicUI = updateDynamicUI;
-window.renderRestOrders = renderRestOrders;
-window.renderDriverFeed = renderDriverFeed;
-window.renderDriverTasks = renderDriverTasks;
-window.renderAdminDashboard = renderAdminDashboard;
-window.updateActiveTasksBadge = updateActiveTasksBadge;
-
-import { deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-window.deleteOrder = deleteOrder;
-
-// بدء التشغيل
-initFirebase();
-
 </script>
 </body>
 </html>
+
+```
