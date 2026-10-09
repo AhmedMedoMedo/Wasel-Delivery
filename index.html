@@ -367,18 +367,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 let usersCol, ordersCol;
-function hideLoader() {
-const loader = document.getElementById('initial-loader');
-if(loader) loader.style.display = 'none';
-}
 async function initFirebase() {
 try {
 await signInAnonymously(auth);
-if(!auth.currentUser) {
-hideLoader();
-navTo('screen-role-select');
-return;
-}
+if(!auth.currentUser) return;
 usersCol = collection(db, 'users');
 ordersCol = collection(db, 'orders');
 const savedUser = localStorage.getItem('wasel_user');
@@ -395,11 +387,7 @@ localStorage.setItem('wasel_user', JSON.stringify(updated));
 }
 }
 updateDynamicUI();
-hideLoader();
-}, (error) => {
-console.error("Users sync error:", error);
-hideLoader();
-});
+}, (error) => console.error("Users sync error:", error));
 onSnapshot(ordersCol, (snapshot) => {
 state.orders = snapshot.docs.map(doc => ({
 id: doc.id,
@@ -408,23 +396,21 @@ createdAt: doc.data().createdAt?.toDate() || new Date(),
 completedAt: doc.data().completedAt?.toDate() || null
 }));
 updateDynamicUI();
-hideLoader();
-}, (error) => {
-console.error("Orders sync error:", error);
-hideLoader();
-});
+}, (error) => console.error("Orders sync error:", error));
+// إخفاء شاشة التحميل بعد جلب البيانات وتوجيه المستخدم
+const loader = document.getElementById('initial-loader');
+if(loader) loader.style.display = 'none';
 if(state.currentUser) {
-hideLoader();
 if(state.currentUser.role === 'restaurant') initRestaurantDashboard();
 else if(state.currentUser.role === 'driver') initDriverDashboard();
 else if(state.currentUser.role === 'admin') loginAsAdmin();
 } else {
-hideLoader();
 navTo('screen-role-select');
 }
 } catch (e) {
 console.error("Firebase Init Error:", e);
-hideLoader();
+const loader = document.getElementById('initial-loader');
+if(loader) loader.style.display = 'none';
 navTo('screen-role-select');
 showToast('تأكد من تفعيل Authentication (Anonymous) في فايربيز', 'error');
 }
@@ -525,7 +511,7 @@ const btn = document.querySelector('button[onclick="processRegister()"]');
 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إنشاء الحساب...';
 btn.disabled = true;
 try {
-const newUserRef = await addDoc(usersCol, {
+await addDoc(usersCol, {
 role: state.currentRoleSelecting,
 name: name,
 phone: phone,
@@ -745,7 +731,7 @@ return `
 <p class="font-bold text-secondary text-sm">{order.orderPrice} ج.م</p>
 </div>
 <div class="flex-1 bg-orange-50 border border-orange-100 rounded-lg p-2 text-center">
-<p class="text-[10px] text-orange-600 mb-1">تدخل (التوصيل)</p>
+<p class="text-[10px] text-orange-600 mb-1">تكسب (التوصيل)</p>
 <p class="font-bold text-primary text-sm">+{order.deliveryFee} ج.م</p>
 </div>
 </div>
