@@ -29,10 +29,12 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
+    <!-- حاوية الإشعارات -->
     <div id="toast-container" class="fixed bottom-20 left-0 right-0 z-50 flex flex-col items-center pointer-events-none space-y-2"></div>
 
     <div class="app-container" id="app">
         
+        <!-- شاشة اختيار الدور -->
         <div id="screen-role-select" class="flex flex-col h-screen justify-center items-center p-6 bg-white relative">
             <div class="w-32 h-32 bg-primary rounded-full flex items-center justify-center mb-8 shadow-lg shadow-primary/40">
                 <i class="fa-solid fa-motorcycle text-6xl text-white"></i>
@@ -52,9 +54,8 @@
                 </button>
             </div>
             
-            <!-- تم تغيير الإصدار للتحقق من زوال الكاش -->
             <div class="absolute bottom-4 text-gray-300 text-xs font-bold">
-                (الإصدار 2.1)
+                (الإصدار 2.2)
             </div>
         </div>
 
@@ -143,7 +144,6 @@
                                 <label class="block text-xs text-gray-500 mb-1">رقم تواصل المطعم</label>
                                 <input type="tel" id="customer-phone" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="01xxxxxxxxx">
                             </div>
-                            <!-- تمت استعادة اختيار المركبة -->
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">المركبة المطلوبة</label>
                                 <div class="flex gap-2">
@@ -167,7 +167,9 @@
                 </div>
 
                 <div id="rest-tab-orders" class="hidden space-y-4">
-                    <h3 class="font-bold text-secondary border-b pb-2">طلباتي الحالية</h3>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="font-bold text-secondary">طلباتي الحالية</h3>
+                    </div>
                     <div id="rest-orders-list" class="space-y-3">
                         <p class="text-center text-gray-400 py-10">جاري التحميل...</p>
                     </div>
@@ -223,7 +225,7 @@
             </div>
         </div>
 
-        <!-- شاشة لوحة الإدارة (الواجهة الغنية) -->
+        <!-- شاشة لوحة الإدارة -->
         <div id="screen-admin" class="hidden flex-col h-screen bg-gray-50">
             <div class="bg-secondary text-white px-4 py-4 flex justify-between items-center shadow-md z-10">
                 <h2 class="font-bold text-lg"><i class="fa-solid fa-shield-halved ml-2 text-primary"></i>لوحة تحكم الإدارة</h2>
@@ -245,7 +247,7 @@
                     <table class="w-full text-sm text-right">
                         <thead class="bg-gray-50 text-gray-600 text-xs">
                             <tr>
-                                <th class="px-4 py-3">رقم</th>
+                                <th class="px-4 py-3">الطلب</th>
                                 <th class="px-4 py-3">الحالة</th>
                             </tr>
                         </thead>
@@ -257,10 +259,9 @@
     </div>
 
     <script>
-        // المتغيرات العامة الأساسية
+        // عقل الواجهة (يعمل فوراً لضمان سرعة استجابة الأزرار)
         window.appState = { currentUser: null, currentRoleSelecting: null, users: [], orders: [] };
 
-        // دوال التنقل الأساسية للواجهة
         window.navTo = function(screenId) {
             const screens = ['screen-role-select', 'screen-login', 'screen-register', 'screen-restaurant', 'screen-driver', 'screen-admin'];
             screens.forEach(id => {
@@ -330,7 +331,7 @@
             if(window.renderAdminDashboard) window.renderAdminDashboard();
         };
 
-        // دوال وهمية يتم استبدالها لاحقاً بفايربيز لمنع ظهور أخطاء
+        // دوال وهمية لمنع الأخطاء في الجزء الأول من الثانية قبل تحميل فايربيز
         window.processLogin = function() { window.showToast('جاري الاتصال بالنظام...', 'error'); };
         window.processRegister = function() { window.showToast('جاري الاتصال...', 'error'); };
         window.postOrder = function() { window.showToast('جاري الاتصال...', 'error'); };
@@ -338,8 +339,9 @@
         window.driverAcceptOrder = function() {};
         window.driverCompleteOrder = function() {};
         window.restApproveDriver = function() {};
+        window.deleteOrder = function() {};
 
-        // التحقق من الحساب المحفوظ فور تحميل الواجهة (يمنع مشكلة الريفرش)
+        // فحص الجلسة المحفوظة لتوجيه المستخدم فوراً
         try {
             const savedUserStr = localStorage.getItem('wasel_user');
             if (savedUserStr) {
@@ -349,10 +351,12 @@
                     window.navTo('screen-restaurant');
                     document.getElementById('rest-header-name').innerText = user.name;
                     document.getElementById('rest-commission').innerText = (user.commissionOwed || 0).toFixed(2);
+                    window.switchRestTab('orders'); // فتح طلباتي افتراضياً لرؤية الطلبات
                 } else if(user.role === 'driver') {
                     window.navTo('screen-driver');
                     document.getElementById('driver-header-name').innerText = user.name;
                     document.getElementById('driver-commission').innerText = (user.commissionOwed || 0).toFixed(2);
+                    window.switchDriverTab('feed');
                 } else if(user.role === 'admin') {
                     window.navTo('screen-admin');
                 }
@@ -363,7 +367,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAjyqCnBR_57Cklb6hkVfk6epnmhNUHdNo",
@@ -384,14 +388,12 @@
             const usersCol = collection(db, 'users');
             const ordersCol = collection(db, 'orders');
 
-            // دالة مساعدة للحصول على بيانات المندوب
             const getDriver = (id) => window.appState.users.find(u => u.id === id);
 
-            // المزامنة الحية للمستخدمين
+            // جلب المستخدمين باستمرار
             onSnapshot(usersCol, (snapshot) => {
                 window.appState.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                // تحديث رصيد العمولات مباشرة إذا كان المستخدم مسجل دخول
                 if(window.appState.currentUser && window.appState.currentUser.role !== 'admin') {
                     const updatedMe = window.appState.users.find(u => u.id === window.appState.currentUser.id);
                     if(updatedMe) {
@@ -406,13 +408,19 @@
                 }
             });
 
-            // المزامنة الحية للطلبات وإعادة رسم الواجهة المناسبة
+            // جلب الطلبات باستمرار (مع حماية نوع التاريخ لكي لا تحدث أخطاء)
             onSnapshot(ordersCol, (snapshot) => {
-                window.appState.orders = snapshot.docs.map(doc => ({ 
-                    id: doc.id, 
-                    ...doc.data(),
-                    createdAt: doc.data().createdAt?.toDate() || new Date()
-                }));
+                window.appState.orders = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    let created = new Date();
+                    if(data.createdAt) {
+                        // حماية لضمان تحويل التاريخ بشكل صحيح مهما كان نوعه
+                        if(typeof data.createdAt.toDate === 'function') created = data.createdAt.toDate();
+                        else if(data.createdAt.seconds) created = new Date(data.createdAt.seconds * 1000);
+                        else created = new Date(data.createdAt);
+                    }
+                    return { id: doc.id, ...data, createdAt: created };
+                });
                 
                 if(!window.appState.currentUser) return;
                 
@@ -426,7 +434,7 @@
                 }
             });
 
-            // تسجيل الدخول
+            // ربط الدوال بالواجهة
             window.processLogin = function() {
                 const phone = document.getElementById('login-phone').value;
                 const pass = document.getElementById('login-password').value;
@@ -456,7 +464,6 @@
                 }
             };
 
-            // تسجيل حساب جديد
             window.processRegister = async function() {
                 const name = document.getElementById('reg-name').value;
                 const phone = document.getElementById('reg-phone').value;
@@ -471,10 +478,7 @@
                 try {
                     await addDoc(usersCol, { 
                         role: window.appState.currentRoleSelecting, 
-                        name, 
-                        phone, 
-                        password,
-                        commissionOwed: 0,
+                        name, phone, password, commissionOwed: 0,
                         ...(window.appState.currentRoleSelecting === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {})
                     });
                     window.showToast('تم إنشاء الحساب بنجاح، سجل دخولك الآن');
@@ -482,7 +486,6 @@
                 } catch(e) { window.showToast('حدث خطأ', 'error'); }
             };
 
-            // نشر الطلب (استعادة واجهة اختيار المركبة)
             window.postOrder = async function() {
                 const type = document.getElementById('order-type').value;
                 const price = document.getElementById('order-price').value;
@@ -496,15 +499,8 @@
                     await addDoc(ordersCol, {
                         restaurantId: window.appState.currentUser.id, 
                         restaurantName: window.appState.currentUser.name,
-                        type, 
-                        vehicleType: vehicle,
-                        deliveryFee: fee, 
-                        orderPrice: price, 
-                        contactPhone: phone,
-                        status: 'pending', 
-                        driverId: null,
-                        applyingDrivers: [],
-                        createdAt: new Date()
+                        type, vehicleType: vehicle, deliveryFee: fee, orderPrice: price, contactPhone: phone,
+                        status: 'pending', driverId: null, applyingDrivers: [], createdAt: new Date()
                     });
                     
                     document.getElementById('order-type').value = '';
@@ -517,18 +513,34 @@
                 } catch(e) { window.showToast('حدث خطأ أثناء النشر', 'error'); }
             };
 
-            // عرض طلبات المطعم (مع ميزة الموافقة على المندوب)
+            // ميزة جديدة: حذف الطلب للمطعم
+            window.deleteOrder = async function(orderId) {
+                if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+                    try {
+                        await deleteDoc(doc(db, 'orders', orderId));
+                        window.showToast('تم الحذف بنجاح');
+                    } catch(e) { window.showToast('حدث خطأ أثناء الحذف', 'error'); }
+                }
+            };
+
             window.renderRestOrders = function() {
                 const list = document.getElementById('rest-orders-list');
                 if(!list) return;
-                const myOrders = window.appState.orders.filter(o => o.restaurantId === window.appState.currentUser.id).sort((a,b) => b.createdAt - a.createdAt);
+                // فرز سليم للتواريخ لتفادي الأخطاء
+                const myOrders = window.appState.orders
+                    .filter(o => o.restaurantId === window.appState.currentUser.id)
+                    .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+                
                 if(myOrders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات</p>'; return; }
 
                 list.innerHTML = myOrders.map(o => `
                     <div class="bg-white p-4 rounded-xl shadow-sm border mb-3">
                         <div class="flex justify-between items-start mb-2">
                             <h4 class="font-bold text-sm text-secondary">${o.type}</h4>
-                            <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'pending' ? 'انتظار' : o.status === 'active' ? 'جاري' : 'مكتمل'}</span>
+                            <div class="flex gap-2 items-center">
+                                ${o.status === 'pending' ? `<button type="button" onclick="window.deleteOrder('${o.id}')" class="text-danger hover:bg-red-50 px-2 py-1 rounded transition cursor-pointer"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                <span class="text-xs px-2 py-1 rounded font-bold ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${o.status === 'pending' ? 'انتظار' : o.status === 'active' ? 'جاري' : 'مكتمل'}</span>
+                            </div>
                         </div>
                         <p class="text-xs text-gray-500 mb-2">أجرة التوصيل: ${o.deliveryFee} ج.م</p>
                         
@@ -537,7 +549,7 @@
                                 const drv = getDriver(dId);
                                 return `<div class="mt-2 bg-orange-50 p-2 rounded flex justify-between items-center border border-orange-100">
                                             <span class="text-xs font-bold text-secondary"><i class="fa-solid fa-motorcycle text-primary ml-1"></i> ${drv?.name || 'مندوب'}</span>
-                                            <button type="button" onclick="window.restApproveDriver('${o.id}', '${dId}')" class="bg-success text-white px-3 py-1.5 rounded-lg text-xs shadow active:scale-95 transition cursor-pointer">قبول المندوب</button>
+                                            <button type="button" onclick="window.restApproveDriver('${o.id}', '${dId}')" class="bg-success text-white px-3 py-1.5 rounded-lg text-xs shadow active:scale-95 transition cursor-pointer">قبول</button>
                                         </div>`;
                             }).join('') 
                         : ''}
@@ -545,24 +557,16 @@
                 `).join('');
             };
 
-            // موافقة المطعم على مندوب معين
             window.restApproveDriver = async function(orderId, driverId) {
                 try {
-                    await updateDoc(doc(db, 'orders', orderId), { 
-                        status: 'active', 
-                        driverId: driverId,
-                        applyingDrivers: [] // تصفية باقي المناديب
-                    });
-                    window.showToast('تم قبول المندوب! الطلب الآن جاري التوصيل.');
+                    await updateDoc(doc(db, 'orders', orderId), { status: 'active', driverId: driverId, applyingDrivers: [] });
+                    window.showToast('تم قبول المندوب! الطلب الآن جاري.');
                 } catch(e) { window.showToast('حدث خطأ', 'error'); }
             };
 
-            // عرض الطلبات المتاحة للمندوب
             window.renderDriverFeed = function() {
                 const list = document.getElementById('driver-feed-list');
                 if(!list) return;
-                
-                // استبعاد الطلبات التي قدم عليها المندوب مسبقاً
                 const orders = window.appState.orders.filter(o => o.status === 'pending' && (!o.applyingDrivers || !o.applyingDrivers.includes(window.appState.currentUser.id)));
                 
                 if(orders.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">لا توجد طلبات متاحة حالياً</p>'; return; }
@@ -577,26 +581,20 @@
                 `).join('');
             };
 
-            // تقديم المندوب على طلب (الواجهة الغنية تعتمد على التقديم وليس القبول الفوري)
             window.driverAcceptOrder = async function(orderId) {
                 const order = window.appState.orders.find(o => o.id === orderId);
                 if(!order) return;
-                
                 const currentApplicants = order.applyingDrivers || [];
-                const newList = [...currentApplicants, window.appState.currentUser.id];
-                
                 try {
-                    await updateDoc(doc(db, 'orders', orderId), { applyingDrivers: newList });
+                    await updateDoc(doc(db, 'orders', orderId), { applyingDrivers: [...currentApplicants, window.appState.currentUser.id] });
                     window.showToast('تم إرسال طلبك للمطعم، في انتظار الموافقة');
                     window.switchDriverTab('tasks');
                 } catch(e) { window.showToast('عذراً، حدث خطأ', 'error'); }
             };
 
-            // عرض مشاوير المندوب (حالة الانتظار والحالة النشطة)
             window.renderDriverTasks = function() {
                 const list = document.getElementById('driver-tasks-list');
                 if(!list) return;
-                
                 const tasks = window.appState.orders.filter(o => o.driverId === window.appState.currentUser.id || (o.applyingDrivers && o.applyingDrivers.includes(window.appState.currentUser.id)));
                 
                 if(tasks.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-10">ليس لديك مشاوير نشطة</p>'; return; }
@@ -604,19 +602,17 @@
                 list.innerHTML = tasks.map(o => `
                     <div class="bg-white p-4 rounded-xl shadow-sm border mb-3">
                         <h4 class="font-bold text-sm text-secondary mb-2">${o.type}</h4>
-                        
                         ${o.status === 'active' && o.driverId === window.appState.currentUser.id ? 
                             `<p class="text-xs text-gray-500 mb-1">هاتف العميل: <a href="tel:${o.contactPhone}" class="text-blue-500 font-bold underline">${o.contactPhone}</a></p>
                              <p class="text-xs text-gray-500 mb-3">المطلوب تحصيله: ${parseInt(o.orderPrice) + parseInt(o.deliveryFee)} ج.م</p>
                              <button type="button" onclick="window.driverCompleteOrder('${o.id}')" class="w-full bg-success text-white py-2.5 rounded-lg font-bold text-xs shadow active:scale-95 transition cursor-pointer">تم التوصيل بنجاح</button>` 
                         : 
-                            `<div class="bg-orange-50 text-orange-600 p-2 rounded text-xs font-bold text-center border border-orange-100"><i class="fa-solid fa-clock ml-1"></i> قيد الانتظار لموافقة المطعم</div>`
+                            `<div class="bg-orange-50 text-orange-600 p-2 rounded text-xs font-bold text-center border border-orange-100"><i class="fa-solid fa-clock ml-1"></i> في انتظار موافقة المطعم</div>`
                         }
                     </div>
                 `).join('');
             };
 
-            // إكمال الطلب
             window.driverCompleteOrder = async function(orderId) {
                 if(confirm('هل تم تسليم الطلب واستلام المبلغ كاملاً؟')) {
                     try {
@@ -626,22 +622,19 @@
                 }
             };
 
-            // عرض لوحة الإدارة (استعادة جدول الطلبات وإجمالي العمولات)
             window.renderAdminDashboard = function() {
                 const ordersElem = document.getElementById('admin-total-orders');
                 const revElem = document.getElementById('admin-total-revenue');
                 const tableElem = document.getElementById('admin-orders-table');
                 
                 if(ordersElem) ordersElem.innerText = window.appState.orders.length;
-                
-                // حساب العمولات: نفرض أن عمولة الموقع 5 جنيه على كل طلب مكتمل مثلاً
                 const completedOrders = window.appState.orders.filter(o => o.status === 'completed');
-                if(revElem) revElem.innerText = completedOrders.length * 5;
+                if(revElem) revElem.innerText = completedOrders.length * 5; // 5 جنيه عمولة كمثال
                 
                 if(tableElem) {
-                    tableElem.innerHTML = window.appState.orders.sort((a,b) => b.createdAt - a.createdAt).map(o => `
+                    tableElem.innerHTML = window.appState.orders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()).map(o => `
                         <tr class="border-b transition hover:bg-gray-50">
-                            <td class="px-4 py-3 font-bold text-gray-600">#${o.id.substring(0,4)}</td>
+                            <td class="px-4 py-3 font-bold text-gray-600 text-xs">${o.type}</td>
                             <td class="px-4 py-3">
                                 <span class="text-xs px-2 py-1 rounded ${o.status === 'pending' ? 'bg-orange-100 text-orange-600' : o.status === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">
                                     ${o.status === 'pending' ? 'انتظار' : o.status === 'active' ? 'جاري' : 'مكتمل'}
