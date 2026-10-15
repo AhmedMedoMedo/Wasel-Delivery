@@ -1,0 +1,8 @@
+{
+  "name": "وصل دليفري - منصة توصيل الطلبات",
+  "description": "المنصة الأسرع لربط المطاعم بمندوبي التوصيل وإدارة الطلبات ومتابعة العمولات",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

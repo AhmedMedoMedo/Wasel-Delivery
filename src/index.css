@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Tajawal", system-ui, -apple-system, sans-serif;
+  --color-primary: #FF5722;
+  --color-secondary: #263238;
+  --color-accent: #FFC107;
+  --color-success: #4CAF50;
+  --color-danger: #F44336;
+}
+
+body {
+  font-family: "Tajawal", sans-serif;
+  background-color: #f3f4f6;
+  margin: 0;
+  padding: 0;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
