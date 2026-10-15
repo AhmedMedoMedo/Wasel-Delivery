@@ -11,6 +11,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <script>
+    // Seamless routing to compiled dist bundle when GitHub Pages serves repository root
+    (function() {
+      if (window.location.hostname.endsWith('github.io') && !window.location.pathname.includes('/dist')) {
+        var p = window.location.pathname;
+        if (!p.endsWith('/')) p += '/';
+        window.location.replace(p + 'dist/' + window.location.search + window.location.hash);
+      }
+    })();
+  </script>
 </head>
 <body class="bg-gray-100 text-gray-800 antialiased selection:bg-orange-500 selection:text-white">
   <div id="root"></div>

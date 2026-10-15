@@ -27,6 +27,25 @@ const AppContent: React.FC = () => {
     );
   }
 
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'screen-role-select':
+        return <RoleSelectScreen />;
+      case 'screen-login':
+        return <LoginScreen />;
+      case 'screen-register':
+        return <RegisterScreen />;
+      case 'screen-restaurant':
+        return <RestaurantDashboard />;
+      case 'screen-driver':
+        return <DriverDashboard />;
+      case 'screen-admin':
+        return <AdminDashboard />;
+      default:
+        return <RoleSelectScreen />;
+    }
+  };
+
   return (
     <div className="max-w-[480px] mx-auto bg-white min-h-screen relative shadow-2xl flex flex-col overflow-hidden text-gray-800">
       {/* Toast Notifications */}
@@ -35,13 +54,8 @@ const AppContent: React.FC = () => {
       {/* Edit Fee Modal */}
       <EditFeeModal />
 
-      {/* Dynamic Screen Routing */}
-      {currentScreen === 'screen-role-select' && <RoleSelectScreen />}
-      {currentScreen === 'screen-login' && <LoginScreen />}
-      {currentScreen === 'screen-register' && <RegisterScreen />}
-      {currentScreen === 'screen-restaurant' && <RestaurantDashboard />}
-      {currentScreen === 'screen-driver' && <DriverDashboard />}
-      {currentScreen === 'screen-admin' && <AdminDashboard />}
+      {/* Dynamic Screen Routing with safe fallback */}
+      {renderScreen()}
     </div>
   );
 };
