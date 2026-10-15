@@ -11,71 +11,118 @@ service cloud.firestore {
 
     // 1. مجموعة المستخدمين الخاصة (users): تحتوي على الحقول الحساسة (البريد، الهاتف، العمولات)
     match /users/{userId} {
-      // القراءة: مقتصرة تماماً على صاحب المعرف (UID) نفسه أو المدير المعتمد عبر Custom Claim
+      // القراءة: لصاحب الحساب نفسه أو المدير
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
       // الإنشاء:
-      // - للمستخدم صاحب الحساب فقط (مطابقة UID)
-      // - منع دور admin من العميل نهائياً (يُسمح فقط بـ restaurant أو driver)
-      // - إلزامية بدء رصيد العمولات بـ 0
-      // - استخدام قائمة حصرية بالحقول المسموح بها لمنع حقن حقول إدارية أو مالية غير مصرح بها
+      // - مطابقة UID
+      // - منع دور admin من العميل
+      // - بدء العمولات بصفر دائماً
+      // - بدء تقييم المندوب بـ 0 دائماً
+      // - حصر الحقول المسموح بها
       allow create: if request.auth != null && request.auth.uid == userId &&
         request.resource.data.role in ['restaurant', 'driver'] &&
         request.resource.data.commissionOwed == 0 &&
+        (!('ratings' in request.resource.data) || request.resource.data.ratings == [0]) &&
         request.resource.data.keys().hasOnly([
           'name', 'email', 'phone', 'role', 'commissionOwed', 'createdAt', 'vehicle', 'ratings'
         ]);
 
       // التحديث:
-      // - المدير المعتمد يمتلك كامل الصلاحية
-      // - المستخدم العادي يُسمح له بتعديل الحقول الشخصية الأساسية فقط (الاسم، الهاتف، نوع المركبة)
-      // - استخدام diff().affectedKeys().hasOnly() لمنع التعديل على role أو commissionOwed أو ratings نهائياً
+      // - المدير يمتلك كامل الصلاحية
+      // - صاحب الحساب مسموح له بتعديل بياناته الشخصية (الاسم، الهاتف، المركبة)
+      // - تسجيل العمولة مستحق الزيادة فقط عند إتمام الطلب (زيادة فقط لمنع التخفيض غير المصرح به)
+      // - إضافة التقييمات من المطاعم مقتصرة على حقل ratings فقط
       allow update: if request.auth != null && (
-        isAdmin() || (
-          request.auth.uid == userId &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'vehicle'])
-        )
-      );
-
-      // الحذف: مقتصر على المدير فقط
-      allow delete: if isAdmin();
-    }
-
-    // 2. مجموعة الملفات العامة (publicProfiles): متاحة للقراءة العامة للمستخدمين دون بيانات حساسة
-    match /publicProfiles/{userId} {
-      // القراءة: متاحة لجميع المستخدمين الموثقين لقراءة أسماء المطاعم وتقييمات المناديب
-      allow read: if request.auth != null;
-
-      // الإنشاء:
-      // - لصاحب الحساب نفسه أو المدير
-      // - حصر الحقول في قائمة محددة ومنع إضافة أي حقول خاصة (الهاتف، البريد، كلمة المرور)
-      // - التحقق من مطابقة الدور لدور المستخدم الموثق في وثيقة users/{uid} المنشأة أولاً
-      // - منع إدخال تقييمات مخصصة عند الإنشاء
-      allow create: if request.auth != null && (request.auth.uid == userId || isAdmin()) &&
-        request.resource.data.keys().hasOnly(['id', 'name', 'role', 'vehicle', 'ratings', 'createdAt']) &&
-        request.resource.data.id == userId &&
-        request.resource.data.role in ['restaurant', 'driver'] &&
-        request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role &&
-        (!('ratings' in request.resource.data) || request.resource.data.ratings == [5]);
-
-      // التحديث:
-      // - المدير المعتمد يمتلك كامل الصلاحية
-      // - المستخدم صاحب الحساب مسموح له بتعديل الاسم ونوع المركبة فقط
-      // - منع تغيير role أو id أو createdAt أو ratings ذاتياً عبر diff().affectedKeys().hasOnly()
-      allow update: if request.auth != null && (
-        isAdmin() || (
-          request.auth.uid == userId &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'vehicle'])
-        )
+        isAdmin() ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'vehicle'])) ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commissionOwed']) && request.resource.data.commissionOwed >= resource.data.commissionOwed) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
       );
 
       // الحذف: للمدير فقط
       allow delete: if isAdmin();
     }
 
-    // 3. مجموعة الطلبات (orders): مغلقة مؤقتاً بالكامل إلى حين تطوير نظام الطلبات
+    // 2. مجموعة الملفات العامة (publicProfiles): أسماء المطاعم وتقييمات المناديب
+    match /publicProfiles/{userId} {
+      // القراءة: متاحة لجميع المستخدمين الموثقين
+      allow read: if request.auth != null;
+
+      // الإنشاء:
+      // - لصاحب الحساب نفسه أو المدير
+      // - مطابقة الدور لدور users/{userId}
+      // - بدء التقييم بـ 0 دائماً
+      allow create: if request.auth != null && (request.auth.uid == userId || isAdmin()) &&
+        request.resource.data.keys().hasOnly(['id', 'name', 'role', 'vehicle', 'ratings', 'createdAt']) &&
+        request.resource.data.id == userId &&
+        request.resource.data.role in ['restaurant', 'driver'] &&
+        request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role &&
+        (!('ratings' in request.resource.data) || request.resource.data.ratings == [0]);
+
+      // التحديث:
+      // - المدير كامل الصلاحية
+      // - صاحب الحساب يعدل الاسم ونوع المركبة فقط
+      // - إضافة التقييمات محصورة في ratings فقط
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'vehicle'])) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
+      );
+
+      // الحذف: للمدير فقط
+      allow delete: if isAdmin();
+    }
+
+    // 3. مجموعة الطلبات (orders): نظام الطلبات ومزامنتها سحابياً ومحلياً
     match /orders/{orderId} {
-      allow read, write: if false;
+      // القراءة: متاحة لجميع المستخدمين الموثقين لمتابعة الطلبات المتاحة والنشطة
+      allow read: if request.auth != null;
+
+      // الإنشاء:
+      // - للمطاعم الموثقة فقط
+      // - أن يكون المطعم صاحب الطلب نفسه
+      // - أن تبدأ حالة الطلب بـ pending
+      // - أسعار وتكلفة موجبة
+      allow create: if request.auth != null &&
+        request.resource.data.restaurantId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.deliveryFee > 0 &&
+        request.resource.data.orderPrice > 0;
+
+      // التحديث:
+      // 1. المدير: كامل الصلاحيات
+      // 2. المطعم صاحب الطلب:
+      //    - تعديل التكلفة والعمولة واختيار المندوب عندما يكون الطلب pending
+      //    - تحديث حالة التقييم rated عندما يكون الطلب completed
+      // 3. المندوب:
+      //    - التقدم للطلب (إضافة نفسه لقائمة applyingDrivers) عندما يكون الطلب pending
+      //    - تأكيد التوصيل (تحويل الحالة إلى completed) إذا كان هو المندوب المعين
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (
+          request.auth.uid == resource.data.restaurantId && (
+            (resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryFee', 'commission', 'status', 'driverId', 'applyingDrivers'])) ||
+            (resource.data.status == 'completed' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rated']))
+          )
+        ) ||
+        (
+          resource.data.status == 'pending' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applyingDrivers'])
+        ) ||
+        (
+          resource.data.status == 'active' &&
+          resource.data.driverId == request.auth.uid &&
+          request.resource.data.status == 'completed' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'commission'])
+        )
+      );
+
+      // الحذف: للمدير أو للمطعم صاحب الطلب إذا كان لا يزال pending
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        (request.auth.uid == resource.data.restaurantId && resource.data.status == 'pending')
+      );
     }
   }
 }

@@ -6,7 +6,10 @@ export const AdminDashboard: React.FC = () => {
 
   const totalOrders = orders.length;
   const completedOrders = orders.filter((o) => o.status === 'completed');
-  const totalRevenue = completedOrders.length * (COMMISSION_RATE * 2);
+  const totalRevenue = completedOrders.reduce(
+    (sum, o) => sum + (o.commission ?? o.deliveryFee * COMMISSION_RATE),
+    0
+  );
   const totalRests = users.filter((u) => u.role === 'restaurant').length;
   const totalDrivers = users.filter((u) => u.role === 'driver').length;
 
@@ -107,7 +110,9 @@ export const AdminDashboard: React.FC = () => {
                         <td className="px-4 py-3 text-gray-600">{driver}</td>
                         <td className={`px-4 py-3 ${statusClass}`}>{statusText}</td>
                         <td className="px-4 py-3 font-bold text-[#F44336]">
-                          {order.status === 'completed' ? (COMMISSION_RATE * 2).toFixed(1) : '0'}
+                          {order.status === 'completed'
+                            ? (order.commission ?? order.deliveryFee * COMMISSION_RATE).toFixed(2)
+                            : '0.00'}
                         </td>
                       </tr>
                     );

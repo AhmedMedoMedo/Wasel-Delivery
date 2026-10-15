@@ -11,13 +11,18 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  addDoc,
   collection,
   onSnapshot,
+  arrayUnion,
+  arrayRemove,
+  increment,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { User, PublicProfile, Order, Toast, UserRole, VehicleType } from '../types';
 
-export const COMMISSION_RATE = 2.5;
+// Commission is 1% (0.01) of delivery fee
+export const COMMISSION_RATE = 0.01;
 
 interface AppContextType {
   currentUser: User | null;
@@ -49,15 +54,15 @@ interface AppContextType {
     deliveryFee: number,
     contactPhone: string,
     vehicleType: VehicleType
-  ) => boolean;
+  ) => Promise<boolean>;
   openEditFeeModal: (orderId: string) => void;
   closeEditFeeModal: () => void;
-  saveNewFee: (orderId: string, fee: number) => void;
-  restApproveDriver: (orderId: string, driverId: string) => void;
-  restRejectDriver: (orderId: string, driverId: string) => void;
-  rateDriver: (orderId: string, rating: number) => void;
-  driverAcceptOrder: (orderId: string) => void;
-  driverCompleteOrder: (orderId: string) => void;
+  saveNewFee: (orderId: string, fee: number) => Promise<void>;
+  restApproveDriver: (orderId: string, driverId: string) => Promise<void>;
+  restRejectDriver: (orderId: string, driverId: string) => Promise<void>;
+  rateDriver: (orderId: string, rating: number) => Promise<void>;
+  driverAcceptOrder: (orderId: string) => Promise<void>;
+  driverCompleteOrder: (orderId: string) => Promise<void>;
   getDriverRating: (driverId: string) => string;
   getRestaurant: (id: string) => PublicProfile | User | undefined;
   getDriver: (id: string) => PublicProfile | User | undefined;
@@ -102,25 +107,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Public profiles collection (contains ONLY non-sensitive data: id, name, role, vehicle, ratings)
   const [publicProfiles, setPublicProfiles] = useState<PublicProfile[]>([]);
 
-  // Orders list (temporarily in state as orders system phase is upcoming)
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const stored = localStorage.getItem('wasel_orders_phase1');
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // fallback
-    }
-    return [];
-  });
-
-  // Save temporary orders state
-  useEffect(() => {
-    try {
-      localStorage.setItem('wasel_orders_phase1', JSON.stringify(orders));
-    } catch {
-      // fallback
-    }
-  }, [orders]);
+  // Real-time Cloud Firestore Orders state
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -134,7 +122,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // 1. Subscribe ONLY to publicProfiles collection (never reading the full private users collection)
+  // 1. Subscribe ONLY to publicProfiles collection
   useEffect(() => {
     if (!currentUser) {
       setPublicProfiles([]);
@@ -162,7 +150,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [currentUser?.id]);
 
-  // 2. Individual real-time subscription for the authenticated user's OWN document: users/{uid}
+  // 2. Real-time Subscription to Cloud Firestore Orders collection (persisted across incognito & all devices)
+  useEffect(() => {
+    if (!currentUser) {
+      setOrders([]);
+      return;
+    }
+
+    try {
+      const ordersCol = collection(db, 'orders');
+      const unsubscribe = onSnapshot(
+        ordersCol,
+        (snapshot) => {
+          const list: Order[] = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<Order, 'id'>),
+          }));
+          setOrders(list);
+        },
+        (error) => {
+          console.warn('Orders subscription notice:', error.message);
+        }
+      );
+      return () => unsubscribe();
+    } catch (e) {
+      console.error('Error attaching orders listener:', e);
+    }
+  }, [currentUser?.id]);
+
+  // 3. Individual real-time subscription for the authenticated user's OWN document: users/{uid}
   useEffect(() => {
     setAuthLoading(true);
     let userDocUnsubscribe: (() => void) | null = null;
@@ -242,7 +258,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
-  // 3. Real Sign In with Firebase Authentication
+  // 4. Real Sign In with Firebase Authentication
   const login = async (email: string, pass: string, role: UserRole): Promise<boolean> => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
@@ -310,7 +326,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           role: role,
           commissionOwed: 0,
           createdAt: new Date().toISOString(),
-          ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {}),
+          ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [0] } : {}),
         };
 
         try {
@@ -320,7 +336,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             name: autoProfile.name,
             role: role,
             createdAt: autoProfile.createdAt,
-            ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {}),
+            ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [0] } : {}),
           });
           const full = { id: uid, ...autoProfile };
           setCurrentUser(full);
@@ -342,7 +358,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // 4. Real Registration: Writes private profile to users/{uid} AND public profile to publicProfiles/{uid}
+  // 5. Real Registration: New drivers start with 0 rating, 0 commission, and clean database linkage
   const register = async (
     name: string,
     email: string,
@@ -373,6 +389,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const uid = cred.user.uid;
 
       // 2. Prepare safe private profile data to store in users/{uid}
+      // Note: All drivers start strictly with rating 0 [0]
       const privateProfile: Omit<User, 'id'> = {
         name: name.trim(),
         email: email.trim(),
@@ -380,7 +397,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role: role,
         commissionOwed: 0,
         createdAt: new Date().toISOString(),
-        ...(role === 'driver' ? { vehicle, ratings: [5] } : {}),
+        ...(role === 'driver' ? { vehicle, ratings: [0] } : {}),
       };
 
       // 3. Prepare public profile data (WITHOUT email, phone, or financial data)
@@ -389,13 +406,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         name: name.trim(),
         role: role,
         createdAt: new Date().toISOString(),
-        ...(role === 'driver' ? { vehicle, ratings: [5] } : {}),
+        ...(role === 'driver' ? { vehicle, ratings: [0] } : {}),
       };
 
-      // Write private user document (users/{uid}) FIRST (so publicProfiles rule can verify matching role)
+      // STEP 1: Write private user document (users/{uid}) FIRST
       await setDoc(doc(db, 'users', uid), privateProfile);
 
-      // Write public profile document (publicProfiles/{uid}) SECOND
+      // STEP 2: Write public profile document (publicProfiles/{uid}) SECOND
       await setDoc(doc(db, 'publicProfiles', uid), publicData);
 
       showToast('تم إنشاء الحساب بنجاح وتم تسجيل دخولك!');
@@ -417,7 +434,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // 5. Real Sign Out
+  // 6. Real Sign Out
   const logout = async () => {
     try {
       await signOut(auth);
@@ -431,37 +448,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // Orders and operations (kept working for continuity during Phase 1 & 2)
-  const postOrder = (
+  // 7. Orders and Operations connected directly to Cloud Firestore
+  const postOrder = async (
     type: string,
     orderPrice: number,
     deliveryFee: number,
     contactPhone: string,
     vehicleType: VehicleType
-  ): boolean => {
+  ): Promise<boolean> => {
     if (!currentUser || currentUser.role !== 'restaurant') return false;
     if (!type || !orderPrice || !deliveryFee || !contactPhone) {
       showToast('يرجى ملء جميع الحقول المطلوبة', 'error');
       return false;
     }
 
-    const newOrder: Order = {
-      id: 'ord-' + Math.floor(1000 + Math.random() * 9000),
+    const comm = Number((Number(deliveryFee) * COMMISSION_RATE).toFixed(2));
+
+    const orderData: Omit<Order, 'id'> = {
       restaurantId: currentUser.id,
-      type,
+      type: type.trim(),
       vehicleType,
-      deliveryFee,
-      orderPrice,
-      contactPhone,
+      deliveryFee: Number(deliveryFee),
+      orderPrice: Number(orderPrice),
+      contactPhone: contactPhone.trim(),
       status: 'pending',
       driverId: null,
       applyingDrivers: [],
       createdAt: new Date().toISOString(),
+      commission: comm,
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
-    showToast('تم نشر طلبك بنجاح في صفحة الطلبات المتاحة للمناديب!');
-    return true;
+    try {
+      await addDoc(collection(db, 'orders'), orderData);
+      showToast(`تم نشر الطلب في السحابة بنجاح! (العمولة: 1% = ${comm} ج.م)`);
+      return true;
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error posting order:', e);
+      showToast('فشل نشر الطلب: ' + e.message, 'error');
+      return false;
+    }
   };
 
   const openEditFeeModal = (orderId: string) => {
@@ -472,106 +498,142 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setEditingOrderId(null);
   };
 
-  const saveNewFee = (orderId: string, fee: number) => {
+  const saveNewFee = async (orderId: string, fee: number) => {
     if (!fee || isNaN(fee) || fee <= 0) {
       showToast('يرجى إدخال مبلغ صحيح', 'error');
       return;
     }
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, deliveryFee: fee } : o))
-    );
-    showToast('تم تحديث تكلفة التوصيل بنجاح!');
-    setEditingOrderId(null);
-  };
 
-  const restApproveDriver = (orderId: string, driverId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: 'active', driverId, applyingDrivers: [] } : o
-      )
-    );
-    showToast('تم اختيار المندوب بنجاح! سيتم تنبيه المندوب للتوجه إليك.');
-  };
-
-  const restRejectDriver = (orderId: string, driverId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              applyingDrivers: (o.applyingDrivers || []).filter((id) => id !== driverId),
-            }
-          : o
-      )
-    );
-    showToast('تم رفض المندوب، المنشور ما زال متاحاً لمناديب آخرين.');
-  };
-
-  const rateDriver = (orderId: string, rating: number) => {
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
-
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, rated: true } : o))
-    );
-
-    if (order.driverId) {
-      // Update in publicProfiles if available
-      try {
-        const pubDocRef = doc(db, 'publicProfiles', order.driverId);
-        getDoc(pubDocRef).then((snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            const curr = data.ratings || [];
-            updateDoc(pubDocRef, { ratings: [...curr, rating] }).catch(console.error);
-          }
-        });
-      } catch (e) {
-        console.error(e);
-      }
+    const newComm = Number((Number(fee) * COMMISSION_RATE).toFixed(2));
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        deliveryFee: Number(fee),
+        commission: newComm,
+      });
+      showToast(`تم تحديث تكلفة التوصيل بنجاح! (العمولة: 1% = ${newComm} ج.م)`);
+      setEditingOrderId(null);
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error updating fee:', e);
+      showToast('فشل تحديث التكلفة: ' + e.message, 'error');
     }
-    showToast('شكراً لتقييمك!');
   };
 
-  const driverAcceptOrder = (orderId: string) => {
+  const restApproveDriver = async (orderId: string, driverId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'active',
+        driverId,
+        applyingDrivers: [],
+      });
+      showToast('تم اختيار المندوب بنجاح في السحابة! سيتم تنبيه المندوب للتوجه إليك.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error approving driver:', e);
+      showToast('فشل اختيار المندوب: ' + e.message, 'error');
+    }
+  };
+
+  const restRejectDriver = async (orderId: string, driverId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        applyingDrivers: arrayRemove(driverId),
+      });
+      showToast('تم رفض المندوب، الطلب ما زال متاحاً لمناديب آخرين.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error rejecting driver:', e);
+      showToast('فشل رفض المندوب: ' + e.message, 'error');
+    }
+  };
+
+  const driverAcceptOrder = async (orderId: string) => {
     if (!currentUser || currentUser.role !== 'driver') return;
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
 
     const currentApplicants = order.applyingDrivers || [];
     if (!currentApplicants.includes(currentUser.id)) {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? { ...o, applyingDrivers: [...currentApplicants, currentUser.id] }
-            : o
-        )
-      );
-      showToast('تم إرسال طلبك للمطعم! يرجى انتظار الموافقة من قسم (مشاويري).');
+      try {
+        await updateDoc(doc(db, 'orders', orderId), {
+          applyingDrivers: arrayUnion(currentUser.id),
+        });
+        showToast('تم إرسال طلبك للمطعم بنجاح! يرجى انتظار الموافقة من قسم (مشاويري).');
+      } catch (err: unknown) {
+        const e = err as Error;
+        console.error('Error accepting order:', e);
+        showToast('فشل التقدم للطلب: ' + e.message, 'error');
+      }
     }
   };
 
-  const driverCompleteOrder = (orderId: string) => {
+  const driverCompleteOrder = async (orderId: string) => {
     if (!currentUser || currentUser.role !== 'driver') return;
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
 
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? { ...o, status: 'completed', completedAt: new Date().toISOString() }
-          : o
-      )
-    );
+    // Commission is 1% of the delivery fee
+    const comm = Number((order.deliveryFee * COMMISSION_RATE).toFixed(2));
 
-    showToast('تم تأكيد التوصيل بنجاح وتم تسجيل العمولة. أحسنت!');
+    try {
+      // 1. Complete order in Firestore
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        commission: comm,
+      });
+
+      // 2. Lock and increment commission owed in Firestore
+      await updateDoc(doc(db, 'users', currentUser.id), {
+        commissionOwed: increment(comm),
+      });
+
+      showToast(`تم تأكيد التوصيل بنجاح وتسجيل عمولة 1% (${comm} ج.م) للموقع. أحسنت!`);
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error completing order:', e);
+      showToast('فشل تأكيد التوصيل: ' + e.message, 'error');
+    }
   };
 
+  const rateDriver = async (orderId: string, rating: number) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || !order.driverId) return;
+
+    try {
+      // 1. Mark order as rated
+      await updateDoc(doc(db, 'orders', orderId), {
+        rated: true,
+      });
+
+      // 2. Append new rating to driver's public profile in Firestore
+      const pubDocRef = doc(db, 'publicProfiles', order.driverId);
+      await updateDoc(pubDocRef, {
+        ratings: arrayUnion(rating),
+      });
+
+      // 3. Append new rating to driver's private profile in Firestore
+      const userDocRef = doc(db, 'users', order.driverId);
+      await updateDoc(userDocRef, {
+        ratings: arrayUnion(rating),
+      });
+
+      showToast('شكراً لتقييمك! تم حفظ التقييم في قاعدة البيانات بنجاح.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error rating driver:', e);
+      showToast('شكراً لتقييمك!');
+    }
+  };
+
+  // Drivers start with 0.0 rating; only ratings > 0 are averaged
   const getDriverRating = (driverId: string): string => {
     const driver = publicProfiles.find((u) => u.id === driverId) || (currentUser?.id === driverId ? currentUser : null);
-    if (!driver || !driver.ratings || driver.ratings.length === 0) return '5.0';
-    const sum = driver.ratings.reduce((a, b) => a + b, 0);
-    return (sum / driver.ratings.length).toFixed(1);
+    if (!driver || !driver.ratings || driver.ratings.length === 0) return '0.0';
+    const validRatings = driver.ratings.filter((r) => r > 0);
+    if (validRatings.length === 0) return '0.0';
+    const sum = validRatings.reduce((a, b) => a + b, 0);
+    return (sum / validRatings.length).toFixed(1);
   };
 
   const getRestaurant = (id: string) => {

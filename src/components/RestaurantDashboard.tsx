@@ -30,12 +30,13 @@ export const RestaurantDashboard: React.FC = () => {
     .filter((o) => o.restaurantId === currentUser?.id)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const handlePostSubmit = (e: React.FormEvent) => {
+  const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const priceNum = parseFloat(orderPrice);
     const feeNum = parseFloat(deliveryFee);
 
-    if (postOrder(orderType, priceNum, feeNum, contactPhone, vehicle)) {
+    const success = await postOrder(orderType, priceNum, feeNum, contactPhone, vehicle);
+    if (success) {
       setOrderType('');
       setOrderPrice('');
       setDeliveryFee('');
