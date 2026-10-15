@@ -69,6 +69,7 @@ interface AppContextType {
   restConfirmPickup: (orderId: string) => Promise<void>;
   restCancelAssignment: (orderId: string) => Promise<void>;
   driverVerifyPickup: (orderId: string, code: string) => Promise<boolean>;
+  isOrderPickedUp: (order: Order) => boolean;
   rateDriver: (orderId: string, rating: number) => Promise<void>;
   driverAcceptOrder: (orderId: string) => Promise<void>;
   driverCompleteOrder: (orderId: string) => Promise<void>;

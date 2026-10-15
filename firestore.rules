@@ -117,7 +117,6 @@ service cloud.firestore {
           resource.data.driverId == request.auth.uid && (
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pickedUp', 'pickedUpAt']) && request.resource.data.pickedUp == true) ||
             (
-              resource.data.get('pickedUp', false) == true &&
               request.resource.data.status == 'completed' &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'commission'])
             )
