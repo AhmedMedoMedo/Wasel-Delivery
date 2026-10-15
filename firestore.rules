@@ -5,7 +5,8 @@ service cloud.firestore {
     // دالة التحقق من هوية المدير: تعتمد حصرياً على Firebase Custom Claims الموثوقة من الخادم
     function isAdmin() {
       return request.auth != null &&
-        request.auth.token.get('admin', false) == true;
+        ('admin' in request.auth.token) &&
+        request.auth.token.admin == true;
     }
 
     // 1. مجموعة المستخدمين الخاصة (users): تحتوي على الحقول الحساسة (البريد، الهاتف، العمولات)

@@ -82,6 +82,10 @@ const getAuthErrorMessage = (errorCode: string): string => {
       return 'تم حظر المحاولات مؤقتاً بسبب تكرار الأخطاء. يرجى الانتظار قليلاً.';
     case 'auth/network-request-failed':
       return 'فشل الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.';
+    case 'permission-denied':
+      return 'تم رفض الإذن من قاعدة البيانات (permission-denied). يرجى التأكد من نشر قواعد الأمان (firestore.rules) في لوحة Firebase Console.';
+    case 'auth/unauthorized-domain':
+      return 'هذا النطاق غير مصرح به في Firebase Auth. يرجى إضافة النطاق في Firebase Console > Authentication > Settings > Authorized domains.';
     default:
       return 'حدث خطأ أثناء المصادقة: ' + errorCode;
   }
@@ -298,9 +302,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         return true;
       } else {
-        showToast('لم يتم العثور على بيانات الحساب في قاعدة البيانات', 'error');
-        await signOut(auth);
-        return false;
+        // If account exists in Firebase Auth but profile document was missing (e.g. earlier failed registration):
+        const autoProfile: Omit<User, 'id'> = {
+          name: email.split('@')[0],
+          email: email.trim(),
+          phone: '',
+          role: role,
+          commissionOwed: 0,
+          createdAt: new Date().toISOString(),
+          ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {}),
+        };
+
+        try {
+          await setDoc(userDocRef, autoProfile);
+          await setDoc(doc(db, 'publicProfiles', uid), {
+            id: uid,
+            name: autoProfile.name,
+            role: role,
+            createdAt: autoProfile.createdAt,
+            ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [5] } : {}),
+          });
+          const full = { id: uid, ...autoProfile };
+          setCurrentUser(full);
+          showToast(`تم تفعيل ملف الحساب بنجاح يا ${full.name}`);
+          setCurrentScreen(role === 'restaurant' ? 'screen-restaurant' : 'screen-driver');
+          return true;
+        } catch {
+          showToast('لم يتم العثور على بيانات الحساب في قاعدة البيانات. يرجى التأكد من نشر firestore.rules في Firebase Console.', 'error');
+          await signOut(auth);
+          return false;
+        }
       }
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
