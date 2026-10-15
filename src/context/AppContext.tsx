@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -20,9 +20,11 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { User, PublicProfile, Order, Toast, UserRole, VehicleType } from '../types';
+import { sound } from '../utils/sound';
 
-// Commission is 1% (0.01) of delivery fee
-export const COMMISSION_RATE = 0.01;
+// Fixed commission is strictly 1.00 EGP per successfully completed order
+export const COMMISSION_PER_ORDER = 1.0;
+export const COMMISSION_RATE = 1.0;
 
 interface AppContextType {
   currentUser: User | null;
@@ -34,6 +36,9 @@ interface AppContextType {
   orders: Order[];
   toasts: Toast[];
   editingOrderId: string | null;
+  isCommissionModalOpen: boolean;
+  openCommissionModal: () => void;
+  closeCommissionModal: () => void;
   setCurrentScreen: (screen: string) => void;
   setCurrentRoleSelecting: (role: UserRole | null) => void;
   showToast: (message: string, type?: 'success' | 'error') => void;
@@ -53,7 +58,8 @@ interface AppContextType {
     orderPrice: number,
     deliveryFee: number,
     contactPhone: string,
-    vehicleType: VehicleType
+    vehicleType: VehicleType,
+    deliveryAddress?: string
   ) => Promise<boolean>;
   openEditFeeModal: (orderId: string) => void;
   closeEditFeeModal: () => void;
@@ -63,6 +69,8 @@ interface AppContextType {
   rateDriver: (orderId: string, rating: number) => Promise<void>;
   driverAcceptOrder: (orderId: string) => Promise<void>;
   driverCompleteOrder: (orderId: string) => Promise<void>;
+  settleCommission: (userId: string) => Promise<boolean>;
+  getCommissionOwed: (user: User | null) => number;
   getDriverRating: (driverId: string) => string;
   getRestaurant: (id: string) => PublicProfile | User | undefined;
   getDriver: (id: string) => PublicProfile | User | undefined;
@@ -103,12 +111,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentRoleSelecting, setCurrentRoleSelecting] = useState<UserRole | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [isCommissionModalOpen, setIsCommissionModalOpen] = useState<boolean>(false);
 
   // Public profiles collection (contains ONLY non-sensitive data: id, name, role, vehicle, ratings)
   const [publicProfiles, setPublicProfiles] = useState<PublicProfile[]>([]);
 
   // Real-time Cloud Firestore Orders state
   const [orders, setOrders] = useState<Order[]>([]);
+
+  // Track previous orders to trigger live sound and vibration chimes
+  const prevOrdersRef = useRef<Order[]>([]);
+  const isInitialOrdersLoad = useRef<boolean>(true);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -121,6 +134,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
+
+  const openCommissionModal = () => setIsCommissionModalOpen(true);
+  const closeCommissionModal = () => setIsCommissionModalOpen(false);
 
   // 1. Subscribe ONLY to publicProfiles collection
   useEffect(() => {
@@ -150,10 +166,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [currentUser?.id]);
 
-  // 2. Real-time Subscription to Cloud Firestore Orders collection (persisted across incognito & all devices)
+  // 2. Real-time Subscription to Cloud Firestore Orders collection with Live Sound Alerts
   useEffect(() => {
     if (!currentUser) {
       setOrders([]);
+      prevOrdersRef.current = [];
+      isInitialOrdersLoad.current = true;
       return;
     }
 
@@ -166,6 +184,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             id: d.id,
             ...(d.data() as Omit<Order, 'id'>),
           }));
+
+          // Audio alerts on live changes (skip initial load chime)
+          if (!isInitialOrdersLoad.current && prevOrdersRef.current.length > 0) {
+            // A. Alert driver if a new pending order arrived
+            if (currentUser.role === 'driver') {
+              const prevIds = new Set(prevOrdersRef.current.map((o) => o.id));
+              const hasNewPending = list.some((o) => !prevIds.has(o.id) && o.status === 'pending');
+              if (hasNewPending) {
+                sound.play('new_order');
+                showToast('🔔 وصل طلب توصيل جديد متاح الآن!');
+              }
+
+              // Alert driver if they were approved for an order
+              const wasApproved = list.some((o) => {
+                const prev = prevOrdersRef.current.find((p) => p.id === o.id);
+                return prev && prev.status === 'pending' && o.status === 'active' && o.driverId === currentUser.id;
+              });
+              if (wasApproved) {
+                sound.play('approved');
+                showToast('🎉 وافق المطعم على طلبك! توجه لاستلام الأوردر.');
+              }
+            }
+
+            // B. Alert restaurant if a driver applied
+            if (currentUser.role === 'restaurant') {
+              const hasNewApplicant = list.some((o) => {
+                if (o.restaurantId !== currentUser.id || o.status !== 'pending') return false;
+                const prev = prevOrdersRef.current.find((p) => p.id === o.id);
+                const prevCount = prev?.applyingDrivers?.length || 0;
+                return (o.applyingDrivers?.length || 0) > prevCount;
+              });
+              if (hasNewApplicant) {
+                sound.play('applicant');
+                showToast('🛵 تقدم مندوب جديد لتوصيل أحد طلباتك!');
+              }
+            }
+          }
+
+          isInitialOrdersLoad.current = false;
+          prevOrdersRef.current = list;
           setOrders(list);
         },
         (error) => {
@@ -176,7 +234,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (e) {
       console.error('Error attaching orders listener:', e);
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.role]);
 
   // 3. Individual real-time subscription for the authenticated user's OWN document: users/{uid}
   useEffect(() => {
@@ -358,7 +416,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // 5. Real Registration: New drivers start with 0 rating, 0 commission, and clean database linkage
+  // 5. Real Registration: New drivers start with 0.0 rating, 0 commission, and clean database linkage
   const register = async (
     name: string,
     email: string,
@@ -448,21 +506,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // 7. Orders and Operations connected directly to Cloud Firestore
+  // 7. Orders and Operations connected directly to Cloud Firestore with fixed 1 EGP commission
   const postOrder = async (
     type: string,
     orderPrice: number,
     deliveryFee: number,
     contactPhone: string,
-    vehicleType: VehicleType
+    vehicleType: VehicleType,
+    deliveryAddress?: string
   ): Promise<boolean> => {
     if (!currentUser || currentUser.role !== 'restaurant') return false;
     if (!type || !orderPrice || !deliveryFee || !contactPhone) {
       showToast('يرجى ملء جميع الحقول المطلوبة', 'error');
       return false;
     }
-
-    const comm = Number((Number(deliveryFee) * COMMISSION_RATE).toFixed(2));
 
     const orderData: Omit<Order, 'id'> = {
       restaurantId: currentUser.id,
@@ -475,12 +532,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       driverId: null,
       applyingDrivers: [],
       createdAt: new Date().toISOString(),
-      commission: comm,
+      commission: COMMISSION_PER_ORDER,
+      ...(deliveryAddress && deliveryAddress.trim() ? { deliveryAddress: deliveryAddress.trim() } : {}),
     };
 
     try {
       await addDoc(collection(db, 'orders'), orderData);
-      showToast(`تم نشر الطلب في السحابة بنجاح! (العمولة: 1% = ${comm} ج.م)`);
+      sound.play('click');
+      showToast(`تم نشر الطلب بنجاح! (العمولة الثابتة: ${COMMISSION_PER_ORDER} ج.م فقط)`);
       return true;
     } catch (err: unknown) {
       const e = err as Error;
@@ -504,13 +563,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
 
-    const newComm = Number((Number(fee) * COMMISSION_RATE).toFixed(2));
     try {
       await updateDoc(doc(db, 'orders', orderId), {
         deliveryFee: Number(fee),
-        commission: newComm,
+        commission: COMMISSION_PER_ORDER,
       });
-      showToast(`تم تحديث تكلفة التوصيل بنجاح! (العمولة: 1% = ${newComm} ج.م)`);
+      showToast('تم تحديث تكلفة التوصيل بنجاح!');
       setEditingOrderId(null);
     } catch (err: unknown) {
       const e = err as Error;
@@ -526,6 +584,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         driverId,
         applyingDrivers: [],
       });
+      sound.play('approved');
       showToast('تم اختيار المندوب بنجاح في السحابة! سيتم تنبيه المندوب للتوجه إليك.');
     } catch (err: unknown) {
       const e = err as Error;
@@ -558,6 +617,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await updateDoc(doc(db, 'orders', orderId), {
           applyingDrivers: arrayUnion(currentUser.id),
         });
+        sound.play('click');
         showToast('تم إرسال طلبك للمطعم بنجاح! يرجى انتظار الموافقة من قسم (مشاويري).');
       } catch (err: unknown) {
         const e = err as Error;
@@ -567,28 +627,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Fixed 1.00 EGP commission applied and locked to both Driver and Restaurant
   const driverCompleteOrder = async (orderId: string) => {
     if (!currentUser || currentUser.role !== 'driver') return;
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
 
-    // Commission is 1% of the delivery fee
-    const comm = Number((order.deliveryFee * COMMISSION_RATE).toFixed(2));
+    const comm = COMMISSION_PER_ORDER; // Fixed 1.00 EGP
 
     try {
-      // 1. Complete order in Firestore
+      // 1. Complete order in Firestore with 1.00 EGP recorded
       await updateDoc(doc(db, 'orders', orderId), {
         status: 'completed',
         completedAt: new Date().toISOString(),
         commission: comm,
       });
 
-      // 2. Lock and increment commission owed in Firestore
+      // 2. Lock and increment commission owed for driver (+1.00 EGP)
       await updateDoc(doc(db, 'users', currentUser.id), {
         commissionOwed: increment(comm),
       });
 
-      showToast(`تم تأكيد التوصيل بنجاح وتسجيل عمولة 1% (${comm} ج.م) للموقع. أحسنت!`);
+      // 3. Lock and increment commission owed for restaurant (+1.00 EGP)
+      if (order.restaurantId) {
+        try {
+          await updateDoc(doc(db, 'users', order.restaurantId), {
+            commissionOwed: increment(comm),
+          });
+        } catch (restErr) {
+          console.warn('Restaurant commission increment note:', restErr);
+        }
+      }
+
+      sound.play('completed');
+      showToast(`تم تأكيد التوصيل بنجاح وتسجيل عمولة ${comm.toFixed(2)} ج.م للموقع في حسابك وحساب المطعم!`);
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Error completing order:', e);
@@ -618,11 +690,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ratings: arrayUnion(rating),
       });
 
+      sound.play('click');
       showToast('شكراً لتقييمك! تم حفظ التقييم في قاعدة البيانات بنجاح.');
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Error rating driver:', e);
       showToast('شكراً لتقييمك!');
+    }
+  };
+
+  // Admin function: Settle/Reset user commission in Firestore
+  const settleCommission = async (userId: string): Promise<boolean> => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        commissionOwed: 0,
+      });
+      showToast('تمت تسوية وتصفير العمولة في قاعدة البيانات بنجاح!');
+      return true;
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error settling commission:', e);
+      showToast('فشل تسوية العمولة: ' + e.message, 'error');
+      return false;
     }
   };
 
@@ -634,6 +723,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (validRatings.length === 0) return '0.0';
     const sum = validRatings.reduce((a, b) => a + b, 0);
     return (sum / validRatings.length).toFixed(1);
+  };
+
+  // Reactive calculation of commission owed: ensures dynamic real-time tracking (1.00 EGP per order)
+  const getCommissionOwed = (user: User | null): number => {
+    if (!user) return 0;
+    const completedCount = orders.filter((o) => {
+      if (user.role === 'restaurant') {
+        return o.restaurantId === user.id && o.status === 'completed';
+      } else if (user.role === 'driver') {
+        return o.driverId === user.id && o.status === 'completed';
+      }
+      return o.status === 'completed';
+    }).length;
+
+    const fromCompletedOrders = completedCount * COMMISSION_PER_ORDER;
+    return Math.max(user.commissionOwed || 0, fromCompletedOrders);
   };
 
   const getRestaurant = (id: string) => {
@@ -658,6 +763,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         orders,
         toasts,
         editingOrderId,
+        isCommissionModalOpen,
+        openCommissionModal,
+        closeCommissionModal,
         setCurrentScreen,
         setCurrentRoleSelecting,
         showToast,
@@ -674,6 +782,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         rateDriver,
         driverAcceptOrder,
         driverCompleteOrder,
+        settleCommission,
+        getCommissionOwed,
         getDriverRating,
         getRestaurant,
         getDriver,

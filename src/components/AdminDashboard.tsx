@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp, COMMISSION_RATE } from '../context/AppContext';
+import { useApp, COMMISSION_PER_ORDER } from '../context/AppContext';
 
 export const AdminDashboard: React.FC = () => {
   const { orders, users, logout, getRestaurant, getDriver } = useApp();
@@ -7,7 +7,7 @@ export const AdminDashboard: React.FC = () => {
   const totalOrders = orders.length;
   const completedOrders = orders.filter((o) => o.status === 'completed');
   const totalRevenue = completedOrders.reduce(
-    (sum, o) => sum + (o.commission ?? o.deliveryFee * COMMISSION_RATE),
+    (sum, o) => sum + (o.commission ?? COMMISSION_PER_ORDER),
     0
   );
   const totalRests = users.filter((u) => u.role === 'restaurant').length;
@@ -111,7 +111,7 @@ export const AdminDashboard: React.FC = () => {
                         <td className={`px-4 py-3 ${statusClass}`}>{statusText}</td>
                         <td className="px-4 py-3 font-bold text-[#F44336]">
                           {order.status === 'completed'
-                            ? (order.commission ?? order.deliveryFee * COMMISSION_RATE).toFixed(2)
+                            ? (order.commission ?? COMMISSION_PER_ORDER).toFixed(2)
                             : '0.00'}
                         </td>
                       </tr>

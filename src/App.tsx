@@ -7,10 +7,11 @@ import { RestaurantDashboard } from './components/RestaurantDashboard';
 import { DriverDashboard } from './components/DriverDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { EditFeeModal } from './components/EditFeeModal';
+import { CommissionModal } from './components/CommissionModal';
 import { ToastContainer } from './components/ToastContainer';
 
 const AppContent: React.FC = () => {
-  const { currentScreen, authLoading } = useApp();
+  const { currentScreen, authLoading, isCommissionModalOpen, closeCommissionModal } = useApp();
 
   if (authLoading) {
     return (
@@ -53,6 +54,9 @@ const AppContent: React.FC = () => {
 
       {/* Edit Fee Modal */}
       <EditFeeModal />
+
+      {/* Commission Settlement Modal */}
+      <CommissionModal isOpen={isCommissionModalOpen} onClose={closeCommissionModal} />
 
       {/* Dynamic Screen Routing with safe fallback */}
       {renderScreen()}

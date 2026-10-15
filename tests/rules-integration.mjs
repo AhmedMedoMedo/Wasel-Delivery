@@ -169,11 +169,17 @@ async function runTests() {
     );
   });
 
-  // Test 9: Tampering with commissionOwed
-  await test('9. Driver CANNOT modify commissionOwed (financial tamper)', async () => {
+  // Test 9: Tampering with commissionOwed (decreasing debt)
+  await test('9. User CANNOT reduce or wipe their commissionOwed debt', async () => {
+    await assertSucceeds(
+      updateDoc(doc(driverDb, 'users', 'driver-user-1'), {
+        commissionOwed: 5,
+      })
+    );
+    // Tamper attempt: trying to reduce debt from 5 down to 0 must FAIL
     await assertFails(
       updateDoc(doc(driverDb, 'users', 'driver-user-1'), {
-        commissionOwed: 100,
+        commissionOwed: 0,
       })
     );
   });

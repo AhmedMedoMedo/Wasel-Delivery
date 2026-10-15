@@ -36,7 +36,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         isAdmin() ||
         (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'vehicle'])) ||
-        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commissionOwed']) && request.resource.data.commissionOwed >= resource.data.commissionOwed) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commissionOwed']) && request.resource.data.commissionOwed >= resource.data.commissionOwed) ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
       );
 
@@ -102,7 +102,7 @@ service cloud.firestore {
         isAdmin() ||
         (
           request.auth.uid == resource.data.restaurantId && (
-            (resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryFee', 'commission', 'status', 'driverId', 'applyingDrivers'])) ||
+            (resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryFee', 'commission', 'status', 'driverId', 'applyingDrivers', 'deliveryAddress'])) ||
             (resource.data.status == 'completed' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rated']))
           )
         ) ||

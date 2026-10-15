@@ -37,8 +37,9 @@ export interface Order {
   applyingDrivers: string[];
   createdAt: string; // ISO date string
   completedAt?: string | null;
-  commission?: number; // 1% of deliveryFee
+  commission?: number; // Fixed 1.00 EGP per completed delivery
   rated?: boolean;
+  deliveryAddress?: string; // Optional delivery address or landmark for maps
 }
 
 export interface Toast {
