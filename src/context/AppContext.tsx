@@ -66,6 +66,9 @@ interface AppContextType {
   saveNewFee: (orderId: string, fee: number) => Promise<void>;
   restApproveDriver: (orderId: string, driverId: string) => Promise<void>;
   restRejectDriver: (orderId: string, driverId: string) => Promise<void>;
+  restConfirmPickup: (orderId: string) => Promise<void>;
+  restCancelAssignment: (orderId: string) => Promise<void>;
+  driverVerifyPickup: (orderId: string, code: string) => Promise<boolean>;
   rateDriver: (orderId: string, rating: number) => Promise<void>;
   driverAcceptOrder: (orderId: string) => Promise<void>;
   driverCompleteOrder: (orderId: string) => Promise<void>;
@@ -521,6 +524,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return false;
     }
 
+    const pickupCode = Math.floor(1000 + Math.random() * 9000).toString();
+
     const orderData: Omit<Order, 'id'> = {
       restaurantId: currentUser.id,
       type: type.trim(),
@@ -533,6 +538,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       applyingDrivers: [],
       createdAt: new Date().toISOString(),
       commission: COMMISSION_PER_ORDER,
+      pickupCode,
+      pickedUp: false,
+      pickedUpAt: null,
       ...(deliveryAddress && deliveryAddress.trim() ? { deliveryAddress: deliveryAddress.trim() } : {}),
     };
 
@@ -627,11 +635,72 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const restConfirmPickup = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        pickedUp: true,
+        pickedUpAt: new Date().toISOString(),
+      });
+      sound.play('click');
+      showToast('تم تأكيد تسليم الأوردر للمندوب واستلام ثمنه بنجاح!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error confirming pickup:', e);
+      showToast('فشل تأكيد الاستلام: ' + e.message, 'error');
+    }
+  };
+
+  const restCancelAssignment = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'pending',
+        driverId: null,
+        applyingDrivers: [],
+      });
+      sound.play('click');
+      showToast('تم إلغاء تعيين المندوب، والطلب أصبح متاحاً من جديد في صفحة الطلبات المتاحة.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error cancelling driver assignment:', e);
+      showToast('فشل إلغاء تعيين المندوب: ' + e.message, 'error');
+    }
+  };
+
+  const driverVerifyPickup = async (orderId: string, code: string): Promise<boolean> => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return false;
+
+    if (order.pickupCode && order.pickupCode !== code.trim()) {
+      showToast('كود الاستلام غير صحيح! يرجى دفع ثمن الأوردر للمطعم لاستلام الكود.', 'error');
+      return false;
+    }
+
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        pickedUp: true,
+        pickedUpAt: new Date().toISOString(),
+      });
+      sound.play('click');
+      showToast('تم التحقق بنجاح! الأوردر معك الآن، توجه لتسليمه للعميل.');
+      return true;
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error verifying pickup code:', e);
+      showToast('فشل التحقق من كود الاستلام: ' + e.message, 'error');
+      return false;
+    }
+  };
+
   // Fixed 1.00 EGP commission applied and locked to both Driver and Restaurant
   const driverCompleteOrder = async (orderId: string) => {
     if (!currentUser || currentUser.role !== 'driver') return;
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
+
+    if (order.pickedUp === false) {
+      showToast('تنبيه أمان: لا يمكنك تأكيد التوصيل قبل دفع ثمن الأوردر للمطعم وتأكيد الاستلام!', 'error');
+      return;
+    }
 
     const comm = COMMISSION_PER_ORDER; // Fixed 1.00 EGP
 
@@ -779,6 +848,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         saveNewFee,
         restApproveDriver,
         restRejectDriver,
+        restConfirmPickup,
+        restCancelAssignment,
+        driverVerifyPickup,
         rateDriver,
         driverAcceptOrder,
         driverCompleteOrder,

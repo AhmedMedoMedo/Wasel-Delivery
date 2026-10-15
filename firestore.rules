@@ -103,6 +103,8 @@ service cloud.firestore {
         (
           request.auth.uid == resource.data.restaurantId && (
             (resource.data.status == 'pending' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryFee', 'commission', 'status', 'driverId', 'applyingDrivers', 'deliveryAddress'])) ||
+            (resource.data.status == 'active' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pickedUp', 'pickedUpAt'])) ||
+            (resource.data.status == 'active' && resource.data.get('pickedUp', false) == false && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'driverId', 'applyingDrivers'])) ||
             (resource.data.status == 'completed' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rated']))
           )
         ) ||
@@ -112,9 +114,14 @@ service cloud.firestore {
         ) ||
         (
           resource.data.status == 'active' &&
-          resource.data.driverId == request.auth.uid &&
-          request.resource.data.status == 'completed' &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'commission'])
+          resource.data.driverId == request.auth.uid && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pickedUp', 'pickedUpAt']) && request.resource.data.pickedUp == true) ||
+            (
+              resource.data.get('pickedUp', false) == true &&
+              request.resource.data.status == 'completed' &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'commission'])
+            )
+          )
         )
       );
 

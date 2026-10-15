@@ -40,6 +40,9 @@ export interface Order {
   commission?: number; // Fixed 1.00 EGP per completed delivery
   rated?: boolean;
   deliveryAddress?: string; // Optional delivery address or landmark for maps
+  pickupCode?: string; // 4-digit secret handover code (e.g. "4821")
+  pickedUp?: boolean; // True once restaurant hands over order & driver pays order price
+  pickedUpAt?: string | null;
 }
 
 export interface Toast {

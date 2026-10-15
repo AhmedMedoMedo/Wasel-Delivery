@@ -14,6 +14,8 @@ export const RestaurantDashboard: React.FC = () => {
     getCommissionOwed,
     restApproveDriver,
     restRejectDriver,
+    restConfirmPickup,
+    restCancelAssignment,
     rateDriver,
     getDriver,
     getDriverRating,
@@ -66,20 +68,20 @@ export const RestaurantDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 relative">
-      {/* Top Header */}
-      <div className="bg-white px-4 py-3.5 flex justify-between items-center shadow-xs z-10 border-b border-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800 relative">
+      {/* Top Header - Sticky on mobile */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-4 py-3 flex justify-between items-center shadow-xs border-b border-gray-100">
         <button
           onClick={openCommissionModal}
           className="text-right group cursor-pointer hover:opacity-95 transition"
           title="اضغط لعرض كشف حساب العمولات ووسائل السداد"
         >
           <div className="flex items-center gap-1.5">
-            <h2 className="font-bold text-base text-[#263238]">{currentUser?.name || 'مطعم'}</h2>
+            <h2 className="font-bold text-sm sm:text-base text-[#263238]">{currentUser?.name || 'مطعم'}</h2>
             <span className="text-[10px] bg-orange-100 text-[#FF5722] px-2 py-0.5 rounded-full font-bold">مطعم</span>
           </div>
           <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-            <span>رصيد العمولات:</span>
+            <span>العمولات:</span>
             <span className="font-bold text-[#F44336] bg-red-50 px-2 py-0.5 rounded-md border border-red-100 group-hover:bg-red-100 transition">
               {commissionOwed.toFixed(2)} ج.م
             </span>
@@ -98,7 +100,7 @@ export const RestaurantDashboard: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24">
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 pb-28">
         {activeTab === 'post' ? (
           <div className="space-y-4">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -416,9 +418,69 @@ export const RestaurantDashboard: React.FC = () => {
                         <p className="text-xs text-gray-500 mb-2">رقم هاتف المندوب متاح عند الاتصال المباشر</p>
                       )}
 
-                      <div className="bg-blue-50 text-blue-700 p-2 rounded-lg text-xs text-center border border-blue-100 font-bold flex items-center justify-center gap-1.5">
+                      {/* Feature: Handover & Payment Verification */}
+                      {!order.pickedUp ? (
+                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 my-2 text-right shadow-2xs">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                              <i className="fa-solid fa-shield-halved text-amber-600"></i>
+                              تأمين دفع واستلام الأوردر
+                            </span>
+                            <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                              بانتظار المندوب
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-amber-800 mb-2 leading-relaxed">
+                            <strong className="font-bold underline text-red-600">تنبيه أمان:</strong> لا تسلم الأوردر للمندوب إلا بعد دفع ثمن الأوردر (<span className="font-extrabold text-[#263238]">{order.orderPrice} ج.م</span>) نقداً باليد.
+                          </p>
+                          
+                          {order.pickupCode && (
+                            <div className="bg-white border border-amber-200 rounded-lg p-2 mb-2 flex items-center justify-between">
+                              <span className="text-xs text-gray-600 font-medium">كود الاستلام السري:</span>
+                              <span className="font-mono text-base font-extrabold text-[#FF5722] tracking-widest bg-orange-50 px-2.5 py-0.5 rounded border border-orange-200">
+                                #{order.pickupCode}
+                              </span>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => restConfirmPickup(order.id)}
+                            className="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-circle-check text-sm"></i>
+                            <span>استلمت {order.orderPrice} ج.م نقداً وسلّمت الأوردر للمندوب</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm('هل تريد إلغاء تعيين هذا المندوب وإعادة نشر الطلب متاحاً للمناديب الآخرين؟')) {
+                                restCancelAssignment(order.id);
+                              }
+                            }}
+                            className="w-full mt-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                          >
+                            <i className="fa-solid fa-user-xmark text-xs"></i>
+                            <span>تأخر المندوب؟ إلغاء المندوب وإعادة فتح الطلب</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 my-2 text-right flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
+                              <i className="fa-solid fa-check"></i>
+                            </span>
+                            <div>
+                              <p className="text-xs font-bold text-green-900">تم استلام {order.orderPrice} ج.م وتسليم الأوردر للمندوب</p>
+                              <p className="text-[10px] text-green-700">المندوب في طريقه الآن لتسليمه للعميل</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-blue-50 text-blue-700 p-2 rounded-lg text-xs text-center border border-blue-100 font-bold flex items-center justify-center gap-1.5 mt-2">
                         <i className="fa-solid fa-motorcycle fa-fade"></i>
-                        <span>المندوب في طريقه لاستلام وتوصيل الطلب</span>
+                        <span>{order.pickedUp ? 'المندوب في طريقه لتسليم الطلب للعميل' : 'المندوب في طريقه للمطعم لدفع الحساب واستلام الطلب'}</span>
                       </div>
                     </div>
                   );
@@ -538,26 +600,26 @@ export const RestaurantDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Nav Bar */}
-      <div className="bg-white border-t border-gray-200 flex justify-around p-2 pb-4 absolute bottom-0 w-full z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+      {/* Bottom Nav Bar - Fixed for seamless mobile scrolling */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white/95 backdrop-blur-md border-t border-gray-200/80 flex justify-around p-1.5 pb-3 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <button
           onClick={() => setActiveTab('post')}
-          className={`flex flex-col items-center p-2 w-1/2 rounded-lg transition ${
-            activeTab === 'post' ? 'text-[#FF5722] font-bold' : 'text-gray-400'
+          className={`flex flex-col items-center justify-center py-1.5 px-3 w-1/2 rounded-xl transition ${
+            activeTab === 'post' ? 'text-[#FF5722] font-bold bg-orange-50/60' : 'text-gray-400 hover:text-gray-600'
           }`}
         >
-          <i className="fa-solid fa-plus-circle text-xl mb-1"></i>
-          <span className="text-xs font-bold">إضافة طلب</span>
+          <i className="fa-solid fa-plus-circle text-xl mb-0.5"></i>
+          <span className="text-xs">إضافة طلب</span>
         </button>
 
         <button
           onClick={() => setActiveTab('orders')}
-          className={`flex flex-col items-center p-2 w-1/2 rounded-lg transition ${
-            activeTab === 'orders' ? 'text-[#FF5722] font-bold' : 'text-gray-400'
+          className={`flex flex-col items-center justify-center py-1.5 px-3 w-1/2 rounded-xl transition ${
+            activeTab === 'orders' ? 'text-[#FF5722] font-bold bg-orange-50/60' : 'text-gray-400 hover:text-gray-600'
           }`}
         >
-          <i className="fa-solid fa-clipboard-list text-xl mb-1"></i>
-          <span className="text-xs font-bold">متابعة الطلبات</span>
+          <i className="fa-solid fa-clipboard-list text-xl mb-0.5"></i>
+          <span className="text-xs">متابعة الطلبات</span>
         </button>
       </div>
     </div>
