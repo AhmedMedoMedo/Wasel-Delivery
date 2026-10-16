@@ -1,8 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export const RoleSelectScreen: React.FC = () => {
-  const { setCurrentScreen, setCurrentRoleSelecting } = useApp();
+  const { setCurrentScreen, setCurrentRoleSelecting, showToast } = useApp();
+  const [holdingSeconds, setHoldingSeconds] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const TOTAL_HOLD_SECONDS = 20;
 
   // Secret URL access for Owner/Admin only: e.g. ?admin or #admin
   useEffect(() => {
@@ -12,9 +17,49 @@ export const RoleSelectScreen: React.FC = () => {
     }
   }, []);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
   const handleSelectRole = (role: 'restaurant' | 'driver' | 'admin') => {
     setCurrentRoleSelecting(role);
     setCurrentScreen('screen-login');
+  };
+
+  // Start 20-second hold on the shield
+  const startHold = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    startTimeRef.current = Date.now();
+    setHoldingSeconds(TOTAL_HOLD_SECONDS);
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    intervalRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const left = Math.max(0, Math.ceil(TOTAL_HOLD_SECONDS - elapsed));
+      setHoldingSeconds(left);
+      if (left <= 0) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }
+    }, 250);
+
+    timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setHoldingSeconds(null);
+      showToast('🔓 تم التحقق بنجاح! مرحباً بك في بوابة الإدارة');
+      handleSelectRole('admin');
+    }, TOTAL_HOLD_SECONDS * 1000);
+  };
+
+  const cancelHold = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setHoldingSeconds(null);
   };
 
   return (
@@ -54,9 +99,37 @@ export const RoleSelectScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Clean Footer */}
-      <div className="w-full text-center text-xs text-gray-400 pb-2">
-        <p>نظام مشفر وآمن عبر Firebase</p>
+      {/* Footer with Secret 20-Second Shield Hold */}
+      <div className="w-full text-center text-xs text-gray-400 pb-2 select-none flex flex-col items-center justify-center gap-1.5">
+        <div className="flex items-center justify-center gap-2">
+          <span>نظام مشفر وآمن عبر Firebase</span>
+          <div
+            onMouseDown={startHold}
+            onMouseUp={cancelHold}
+            onMouseLeave={cancelHold}
+            onTouchStart={startHold}
+            onTouchEnd={cancelHold}
+            onTouchCancel={cancelHold}
+            onContextMenu={(e) => e.preventDefault()}
+            className="inline-flex items-center justify-center p-1 cursor-default select-none transition-transform"
+            style={{ touchAction: 'none', userSelect: 'none' }}
+          >
+            <i
+              className={`fa-solid fa-shield text-[11px] transition-all duration-300 ${
+                holdingSeconds !== null
+                  ? 'text-[#FF5722] scale-125 opacity-100'
+                  : 'text-gray-300 opacity-25 hover:opacity-40'
+              }`}
+            ></i>
+          </div>
+        </div>
+
+        {/* Discreet feedback only visible while holding */}
+        {holdingSeconds !== null && (
+          <div className="text-[11px] font-bold text-[#FF5722] font-mono animate-pulse bg-orange-50 border border-orange-200 px-3 py-1 rounded-full">
+            استمر بالضغط: {holdingSeconds} ثانية
+          </div>
+        )}
       </div>
     </div>
   );
