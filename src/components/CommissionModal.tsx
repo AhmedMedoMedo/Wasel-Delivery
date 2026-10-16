@@ -7,19 +7,27 @@ interface Props {
 }
 
 export const CommissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { currentUser, orders, showToast, getCommissionOwed } = useApp();
+  const { currentUser, orders, showToast, getCommissionOwed, userReportPayment } = useApp();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!isOpen || !currentUser) return null;
 
-  const completedOrders = orders.filter((o) => {
-    if (currentUser.role === 'restaurant') {
-      return o.restaurantId === currentUser.id && o.status === 'completed';
-    } else if (currentUser.role === 'driver') {
-      return o.driverId === currentUser.id && o.status === 'completed';
-    }
-    return o.status === 'completed';
-  }).sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
+  const completedOrders = orders
+    .filter((o) => {
+      if (currentUser.role === 'restaurant') {
+        return o.restaurantId === currentUser.id && o.status === 'completed';
+      } else if (currentUser.role === 'driver') {
+        return o.driverId === currentUser.id && o.status === 'completed';
+      }
+      return o.status === 'completed';
+    })
+    .filter((o) => {
+      if (currentUser.lastSettledAt && (o.completedAt || o.createdAt)) {
+        return new Date(o.completedAt || o.createdAt).getTime() > new Date(currentUser.lastSettledAt).getTime();
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
 
   const totalOwed = getCommissionOwed(currentUser).toFixed(2);
   const vodafoneNumber = '01011112222';
@@ -159,6 +167,30 @@ export const CommissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Action button: Mark Payment Done in App */}
+          {currentUser.paymentPending ? (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-center text-xs space-y-1">
+              <p className="font-bold flex items-center justify-center gap-1.5 text-amber-800">
+                <i className="fa-solid fa-clock-rotate-left text-sm"></i>
+                <span>تم إرسال إشعار السداد للإدارة</span>
+              </p>
+              <p className="text-[11px] text-amber-700">
+                تقوم الإدارة بمراجعة الحساب البنكي / المحفظة وسيتم تصفير العداد لديك فور التأكد.
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={async () => {
+                await userReportPayment();
+              }}
+              disabled={parseFloat(totalOwed) <= 0}
+              className="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#4CAF50]/25 transition active:scale-98 disabled:opacity-50 cursor-pointer"
+            >
+              <i className="fa-solid fa-circle-check text-base"></i>
+              <span>تم الدفع بالفعل (إشعار الإدارة لتصفير العداد)</span>
+            </button>
+          )}
+
           {/* Action button: Send WhatsApp Confirmation */}
           <a
             href={`https://wa.me/201011112222?text=${whatsappMessage}`}
@@ -167,13 +199,13 @@ export const CommissionModal: React.FC<Props> = ({ isOpen, onClose }) => {
             className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-[#25D366]/30 transition active:scale-98"
           >
             <i className="fa-brands fa-whatsapp text-lg"></i>
-            <span>إرسال إشعار السداد للإدارة عبر واتساب</span>
+            <span>إرسال إيصال السداد للإدارة عبر واتساب</span>
           </a>
 
           <div className="text-center">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-xs py-1 transition"
+              className="text-gray-400 hover:text-gray-600 text-xs py-1 transition cursor-pointer"
             >
               إغلاق النافذة
             </button>

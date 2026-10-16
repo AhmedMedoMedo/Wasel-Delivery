@@ -10,6 +10,8 @@ import { EditFeeModal } from './components/EditFeeModal';
 import { CommissionModal } from './components/CommissionModal';
 import { ToastContainer } from './components/ToastContainer';
 
+import { PendingApprovalScreen } from './components/PendingApprovalScreen';
+
 const AppContent: React.FC = () => {
   const { currentScreen, authLoading, isCommissionModalOpen, closeCommissionModal } = useApp();
 
@@ -42,6 +44,8 @@ const AppContent: React.FC = () => {
         return <DriverDashboard />;
       case 'screen-admin':
         return <AdminDashboard />;
+      case 'screen-pending-approval':
+        return <PendingApprovalScreen />;
       default:
         return <RoleSelectScreen />;
     }

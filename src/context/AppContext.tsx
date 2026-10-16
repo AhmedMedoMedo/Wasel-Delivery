@@ -17,9 +17,10 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  deleteDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { User, PublicProfile, Order, Toast, UserRole, VehicleType } from '../types';
+import { User, PublicProfile, Order, Toast, UserRole, VehicleType, DocumentImages } from '../types';
 import { sound } from '../utils/sound';
 
 // Fixed commission is strictly 1.00 EGP per successfully completed order
@@ -51,7 +52,8 @@ interface AppContextType {
     phone: string,
     pass: string,
     role: UserRole,
-    vehicle?: VehicleType
+    vehicle?: VehicleType,
+    documents?: DocumentImages
   ) => Promise<boolean>;
   postOrder: (
     type: string,
@@ -78,6 +80,14 @@ interface AppContextType {
   getDriverRating: (driverId: string) => string;
   getRestaurant: (id: string) => PublicProfile | User | undefined;
   getDriver: (id: string) => PublicProfile | User | undefined;
+  userReportPayment: () => Promise<void>;
+  adminApproveUser: (userId: string) => Promise<void>;
+  adminRejectUser: (userId: string, reason?: string) => Promise<void>;
+  adminDeleteUser: (userId: string) => Promise<void>;
+  adminDeleteOrder: (orderId: string) => Promise<void>;
+  adminResetCommission: (userId: string) => Promise<void>;
+  adminConfirmPayment: (userId: string) => Promise<void>;
+  adminRejectPayment: (userId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -117,8 +127,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [isCommissionModalOpen, setIsCommissionModalOpen] = useState<boolean>(false);
 
-  // Public profiles collection (contains ONLY non-sensitive data: id, name, role, vehicle, ratings)
+  // Public profiles collection (contains non-sensitive data: id, name, role, vehicle, ratings)
   const [publicProfiles, setPublicProfiles] = useState<PublicProfile[]>([]);
+  // Admin full user records collection
+  const [adminUsers, setAdminUsers] = useState<User[]>([]);
 
   // Real-time Cloud Firestore Orders state
   const [orders, setOrders] = useState<Order[]>([]);
@@ -142,7 +154,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const openCommissionModal = () => setIsCommissionModalOpen(true);
   const closeCommissionModal = () => setIsCommissionModalOpen(false);
 
-  // 1. Subscribe ONLY to publicProfiles collection
+  // 1. Subscribe to publicProfiles collection
   useEffect(() => {
     if (!currentUser) {
       setPublicProfiles([]);
@@ -169,6 +181,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Error attaching publicProfiles listener:', e);
     }
   }, [currentUser?.id]);
+
+  // 1.1 If admin is logged in, also subscribe to users collection for full access to documents/status/payments
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') {
+      setAdminUsers([]);
+      return;
+    }
+
+    try {
+      const usersCol = collection(db, 'users');
+      const unsubscribe = onSnapshot(
+        usersCol,
+        (snapshot) => {
+          const list: User[] = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<User, 'id'>),
+          }));
+          setAdminUsers(list);
+        },
+        (error) => {
+          console.warn('Admin users collection subscription notice:', error.message);
+        }
+      );
+      return () => unsubscribe();
+    } catch (e) {
+      console.error('Error attaching admin users listener:', e);
+    }
+  }, [currentUser?.id, currentUser?.role]);
+
+  // Merge public profiles with admin users when admin
+  const allMergedUsers: (User | PublicProfile)[] = (() => {
+    const map = new Map<string, any>();
+    publicProfiles.forEach((p) => map.set(p.id, { ...p }));
+    if (currentUser?.role === 'admin') {
+      adminUsers.forEach((u) => {
+        const existing = map.get(u.id) || {};
+        map.set(u.id, {
+          ...existing,
+          ...u,
+          documents: u.documents || existing.documents || {},
+        });
+      });
+    }
+    return Array.from(map.values());
+  })();
 
   // 2. Real-time Subscription to Cloud Firestore Orders collection with Live Sound Alerts
   useEffect(() => {
@@ -284,12 +341,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   setCurrentScreen('screen-role-select');
                   showToast('صلاحيات الإدارة غير مهيأة على الخادم. تم تعطيل الدخول الإداري مؤقتاً.', 'error');
                 }
-              } else if (profile.role === 'restaurant') {
+              } else if (profile.role === 'restaurant' || profile.role === 'driver') {
                 setCurrentUser(profile);
-                setCurrentScreen('screen-restaurant');
-              } else if (profile.role === 'driver') {
-                setCurrentUser(profile);
-                setCurrentScreen('screen-driver');
+                if (profile.approvalStatus === 'pending' || profile.approvalStatus === 'rejected') {
+                  setCurrentScreen('screen-pending-approval');
+                } else if (profile.role === 'restaurant') {
+                  setCurrentScreen('screen-restaurant');
+                } else {
+                  setCurrentScreen('screen-driver');
+                }
               } else {
                 setCurrentUser(null);
                 setCurrentScreen('screen-role-select');
@@ -377,11 +437,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           showToast(`هذا الحساب مسجل كـ (${roleLabel}). يرجى الدخول من بوابة الـ ${roleLabel}.`, 'error');
           setCurrentRoleSelecting(profile.role);
           setCurrentUser(profile);
-          setCurrentScreen(profile.role === 'restaurant' ? 'screen-restaurant' : 'screen-driver');
+          if (profile.approvalStatus === 'pending' || profile.approvalStatus === 'rejected') {
+            setCurrentScreen('screen-pending-approval');
+          } else {
+            setCurrentScreen(profile.role === 'restaurant' ? 'screen-restaurant' : 'screen-driver');
+          }
           return true;
         }
 
         setCurrentUser(profile);
+        if (profile.approvalStatus === 'pending' || profile.approvalStatus === 'rejected') {
+          showToast(profile.approvalStatus === 'rejected' ? 'تم رفض طلب الانضمام لهذا الحساب.' : 'طلبك قيد مراجعة وتدقيق الإدارة.');
+          setCurrentScreen('screen-pending-approval');
+          return true;
+        }
+
         showToast(`مرحباً بك يا ${profile.name}`);
         if (profile.role === 'restaurant') {
           setCurrentScreen('screen-restaurant');
@@ -390,13 +460,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
         return true;
       } else {
-        // If account exists in Firebase Auth but profile document was missing (e.g. earlier failed registration):
+        // If account exists in Firebase Auth but profile document was missing:
         const autoProfile: Omit<User, 'id'> = {
           name: email.split('@')[0],
           email: email.trim(),
           phone: '',
           role: role,
           commissionOwed: 0,
+          approvalStatus: 'approved',
           createdAt: new Date().toISOString(),
           ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [0] } : {}),
         };
@@ -408,6 +479,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             name: autoProfile.name,
             role: role,
             createdAt: autoProfile.createdAt,
+            approvalStatus: 'approved',
             ...(role === 'driver' ? { vehicle: 'motorcycle', ratings: [0] } : {}),
           });
           const full = { id: uid, ...autoProfile };
@@ -430,14 +502,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  // 5. Real Registration: New drivers start with 0.0 rating, 0 commission, and clean database linkage
+  // 5. Real Registration: New applicants require admin approval based on document requirements
   const register = async (
     name: string,
     email: string,
     phone: string,
     pass: string,
     role: UserRole,
-    vehicle: VehicleType = 'motorcycle'
+    vehicle: VehicleType = 'motorcycle',
+    documents: DocumentImages = {}
   ): Promise<boolean> => {
     // Prevent registering admin account from the public interface
     if (role === 'admin') {
@@ -460,8 +533,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
       const uid = cred.user.uid;
 
-      // 2. Prepare safe private profile data to store in users/{uid}
-      // Note: All drivers start strictly with rating 0 [0]
+      // 2. Prepare safe private profile data to store in users/{uid} with pending status
       const privateProfile: Omit<User, 'id'> = {
         name: name.trim(),
         email: email.trim(),
@@ -469,33 +541,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         role: role,
         commissionOwed: 0,
         createdAt: new Date().toISOString(),
+        approvalStatus: 'pending',
+        documents: documents || {},
+        paymentPending: false,
         ...(role === 'driver' ? { vehicle, ratings: [0] } : {}),
       };
 
-      // 3. Prepare public profile data (WITHOUT email, phone, or financial data)
+      // 3. Prepare public profile data
       const publicData: PublicProfile = {
         id: uid,
         name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
         role: role,
         createdAt: new Date().toISOString(),
+        approvalStatus: 'pending',
+        documents: documents || {},
+        commissionOwed: 0,
+        paymentPending: false,
         ...(role === 'driver' ? { vehicle, ratings: [0] } : {}),
       };
 
-      // STEP 1: Write private user document (users/{uid}) FIRST
+      // Write private and public profile documents
       await setDoc(doc(db, 'users', uid), privateProfile);
-
-      // STEP 2: Write public profile document (publicProfiles/{uid}) SECOND
       await setDoc(doc(db, 'publicProfiles', uid), publicData);
 
-      showToast('تم إنشاء الحساب بنجاح وتم تسجيل دخولك!');
       const fullProfile: User = { id: uid, ...privateProfile };
       setCurrentUser(fullProfile);
-
-      if (role === 'restaurant') {
-        setCurrentScreen('screen-restaurant');
-      } else {
-        setCurrentScreen('screen-driver');
-      }
+      setCurrentScreen('screen-pending-approval');
+      showToast('تم إرسال طلب الانضمام والمستندات بنجاح! طلبك قيد مراجعة وتدقيق الإدارة.');
       return true;
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
@@ -794,8 +868,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Admin function: Settle/Reset user commission in Firestore
   const settleCommission = async (userId: string): Promise<boolean> => {
     try {
+      const now = new Date().toISOString();
       await updateDoc(doc(db, 'users', userId), {
         commissionOwed: 0,
+        paymentPending: false,
+        lastSettledAt: now,
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        commissionOwed: 0,
+        paymentPending: false,
       });
       showToast('تمت تسوية وتصفير العمولة في قاعدة البيانات بنجاح!');
       return true;
@@ -804,6 +885,149 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Error settling commission:', e);
       showToast('فشل تسوية العمولة: ' + e.message, 'error');
       return false;
+    }
+  };
+
+  // User Reports they transferred/paid commission
+  const userReportPayment = async (): Promise<void> => {
+    if (!currentUser) return;
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'users', currentUser.id), {
+        paymentPending: true,
+        paymentReportedAt: now,
+      });
+      await updateDoc(doc(db, 'publicProfiles', currentUser.id), {
+        paymentPending: true,
+        paymentReportedAt: now,
+      });
+      setCurrentUser((prev) => (prev ? { ...prev, paymentPending: true, paymentReportedAt: now } : prev));
+      showToast('تم إرسال إشعار السداد للإدارة بنجاح! سيتم مراجعة الدفع وتصفير العداد.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error reporting payment:', e);
+      showToast('فشل إرسال إشعار السداد: ' + e.message, 'error');
+    }
+  };
+
+  // Admin approves new applicant (restaurant or driver)
+  const adminApproveUser = async (userId: string): Promise<void> => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        approvalStatus: 'approved',
+        rejectionReason: '',
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        approvalStatus: 'approved',
+      });
+      showToast('تمت الموافقة على الحساب واعتماده بنجاح!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error approving user:', e);
+      showToast('فشل قبول الحساب: ' + e.message, 'error');
+    }
+  };
+
+  // Admin rejects applicant with optional reason
+  const adminRejectUser = async (userId: string, reason?: string): Promise<void> => {
+    try {
+      const fallbackReason = reason?.trim() || 'لم يتم استيفاء شروط التسجيل والصور المطلوبة بشكل صحيح.';
+      await updateDoc(doc(db, 'users', userId), {
+        approvalStatus: 'rejected',
+        rejectionReason: fallbackReason,
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        approvalStatus: 'rejected',
+      });
+      showToast('تم رفض طلب التسجيل.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error rejecting user:', e);
+      showToast('فشل رفض الحساب: ' + e.message, 'error');
+    }
+  };
+
+  // Admin deletes any user completely
+  const adminDeleteUser = async (userId: string): Promise<void> => {
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+      await deleteDoc(doc(db, 'publicProfiles', userId));
+      showToast('تم حذف المستخدم بنجاح من قاعدة البيانات!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error deleting user:', e);
+      showToast('فشل حذف المستخدم: ' + e.message, 'error');
+    }
+  };
+
+  // Admin deletes any order
+  const adminDeleteOrder = async (orderId: string): Promise<void> => {
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+      showToast('تم حذف الطلب بنجاح!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error deleting order:', e);
+      showToast('فشل حذف الطلب: ' + e.message, 'error');
+    }
+  };
+
+  // Admin resets commission counter to 0 directly
+  const adminResetCommission = async (userId: string): Promise<void> => {
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'users', userId), {
+        commissionOwed: 0,
+        paymentPending: false,
+        lastSettledAt: now,
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        commissionOwed: 0,
+        paymentPending: false,
+      });
+      showToast('تم تصفير عداد الرسوم للمستخدم بنجاح!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error resetting commission:', e);
+      showToast('فشل تصفير الرسوم: ' + e.message, 'error');
+    }
+  };
+
+  // Admin confirms payment: resets commission counter to 0 and clears paymentPending
+  const adminConfirmPayment = async (userId: string): Promise<void> => {
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'users', userId), {
+        commissionOwed: 0,
+        paymentPending: false,
+        lastSettledAt: now,
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        commissionOwed: 0,
+        paymentPending: false,
+      });
+      showToast('تم قبول السداد وتصفير عداد الرسوم بنجاح!');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error confirming payment:', e);
+      showToast('فشل تأكيد السداد: ' + e.message, 'error');
+    }
+  };
+
+  // Admin rejects payment mark: keeps commission counter intact and clears paymentPending
+  const adminRejectPayment = async (userId: string): Promise<void> => {
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        paymentPending: false,
+      });
+      await updateDoc(doc(db, 'publicProfiles', userId), {
+        paymentPending: false,
+      });
+      showToast('تم رفض إشعار السداد وبقاء عداد الرسوم كما هو.');
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error('Error rejecting payment:', e);
+      showToast('فشل رفض إشعار السداد: ' + e.message, 'error');
     }
   };
 
@@ -817,9 +1041,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return (sum / validRatings.length).toFixed(1);
   };
 
-  // Reactive calculation of commission owed: ensures dynamic real-time tracking (1.00 EGP per order)
+  // Reactive calculation of commission owed: respects settled fee resets
   const getCommissionOwed = (user: User | null): number => {
     if (!user) return 0;
+    if (typeof user.commissionOwed === 'number') {
+      return user.commissionOwed;
+    }
     const completedCount = orders.filter((o) => {
       if (user.role === 'restaurant') {
         return o.restaurantId === user.id && o.status === 'completed';
@@ -829,18 +1056,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return o.status === 'completed';
     }).length;
 
-    const fromCompletedOrders = completedCount * COMMISSION_PER_ORDER;
-    return Math.max(user.commissionOwed || 0, fromCompletedOrders);
+    return completedCount * COMMISSION_PER_ORDER;
   };
 
   const getRestaurant = (id: string) => {
     if (currentUser?.id === id) return currentUser;
-    return publicProfiles.find((u) => u.id === id);
+    return allMergedUsers.find((u) => u.id === id);
   };
 
   const getDriver = (id: string) => {
     if (currentUser?.id === id) return currentUser;
-    return publicProfiles.find((u) => u.id === id);
+    return allMergedUsers.find((u) => u.id === id);
   };
 
   const isOrderPickedUp = (order: Order): boolean => {
@@ -854,7 +1080,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         currentRoleSelecting,
         currentScreen,
         authLoading,
-        users: publicProfiles,
+        users: allMergedUsers,
         publicProfiles,
         orders,
         toasts,
@@ -887,6 +1113,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getDriverRating,
         getRestaurant,
         getDriver,
+        userReportPayment,
+        adminApproveUser,
+        adminRejectUser,
+        adminDeleteUser,
+        adminDeleteOrder,
+        adminResetCommission,
+        adminConfirmPayment,
+        adminRejectPayment,
       }}
     >
       {children}

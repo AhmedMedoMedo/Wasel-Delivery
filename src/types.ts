@@ -2,6 +2,14 @@ export type UserRole = 'restaurant' | 'driver' | 'admin';
 export type VehicleType = 'motorcycle' | 'car' | 'any';
 export type OrderStatus = 'pending' | 'active' | 'completed';
 
+export interface DocumentImages {
+  idCardFront?: string; // Base64
+  idCardBack?: string;  // Base64
+  personalPhoto?: string; // Base64
+  selfieWithId?: string; // Base64
+  commercialRegister?: string; // For restaurants
+}
+
 export interface User {
   id: string; // Firebase Auth UID
   name: string;
@@ -13,15 +21,28 @@ export interface User {
   ratings?: number[]; // list of numbers (1-5) for drivers
   avatar?: string;
   createdAt?: string;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
+  rejectionReason?: string;
+  documents?: DocumentImages;
+  paymentPending?: boolean; // True when user reports they transferred commission
+  paymentReportedAt?: string;
+  lastSettledAt?: string;
 }
 
 export interface PublicProfile {
   id: string; // Firebase Auth UID
   name: string;
   role: UserRole;
+  phone?: string;
+  email?: string;
   vehicle?: VehicleType; // for drivers
   ratings?: number[]; // for drivers
   createdAt?: string;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
+  documents?: DocumentImages;
+  commissionOwed?: number;
+  paymentPending?: boolean;
+  paymentReportedAt?: string;
 }
 
 export interface Order {

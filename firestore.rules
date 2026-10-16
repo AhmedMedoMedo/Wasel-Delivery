@@ -26,17 +26,18 @@ service cloud.firestore {
         request.resource.data.commissionOwed == 0 &&
         (!('ratings' in request.resource.data) || request.resource.data.ratings == [0]) &&
         request.resource.data.keys().hasOnly([
-          'name', 'email', 'phone', 'role', 'commissionOwed', 'createdAt', 'vehicle', 'ratings'
+          'name', 'email', 'phone', 'role', 'commissionOwed', 'createdAt', 'vehicle', 'ratings',
+          'approvalStatus', 'rejectionReason', 'documents', 'paymentPending', 'paymentReportedAt', 'lastSettledAt'
         ]);
 
       // التحديث:
       // - المدير يمتلك كامل الصلاحية
-      // - صاحب الحساب مسموح له بتعديل بياناته الشخصية (الاسم، الهاتف، المركبة)
+      // - صاحب الحساب مسموح له بتعديل بياناته الشخصية (الاسم، الهاتف، المركبة) وإشعار الدفع
       // - تسجيل العمولة مستحق الزيادة فقط عند إتمام الطلب (زيادة فقط لمنع التخفيض غير المصرح به)
       // - إضافة التقييمات من المطاعم مقتصرة على حقل ratings فقط
       allow update: if request.auth != null && (
         isAdmin() ||
-        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'vehicle'])) ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'vehicle', 'paymentPending', 'paymentReportedAt'])) ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commissionOwed']) && request.resource.data.commissionOwed >= resource.data.commissionOwed) ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
       );
@@ -55,7 +56,10 @@ service cloud.firestore {
       // - مطابقة الدور لدور users/{userId}
       // - بدء التقييم بـ 0 دائماً
       allow create: if request.auth != null && (request.auth.uid == userId || isAdmin()) &&
-        request.resource.data.keys().hasOnly(['id', 'name', 'role', 'vehicle', 'ratings', 'createdAt']) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'name', 'phone', 'email', 'role', 'vehicle', 'ratings', 'createdAt',
+          'approvalStatus', 'rejectionReason', 'documents', 'commissionOwed', 'paymentPending', 'paymentReportedAt'
+        ]) &&
         request.resource.data.id == userId &&
         request.resource.data.role in ['restaurant', 'driver'] &&
         request.resource.data.role == get(/databases/$(database)/documents/users/$(userId)).data.role &&
@@ -63,11 +67,11 @@ service cloud.firestore {
 
       // التحديث:
       // - المدير كامل الصلاحية
-      // - صاحب الحساب يعدل الاسم ونوع المركبة فقط
+      // - صاحب الحساب يعدل الاسم ونوع المركبة وإشعار الدفع
       // - إضافة التقييمات محصورة في ratings فقط
       allow update: if request.auth != null && (
         isAdmin() ||
-        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'vehicle'])) ||
+        (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'vehicle', 'paymentPending', 'paymentReportedAt'])) ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings'])
       );
 
