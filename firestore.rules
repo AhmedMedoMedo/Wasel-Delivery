@@ -2,11 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // دالة التحقق من هوية المدير: تعتمد حصرياً على Firebase Custom Claims الموثوقة من الخادم
+    // دالة التحقق من هوية المدير: تعتمد على Custom Claims أو البريد المعتمد للمالك
     function isAdmin() {
-      return request.auth != null &&
-        ('admin' in request.auth.token) &&
-        request.auth.token.admin == true;
+      return request.auth != null && (
+        (('admin' in request.auth.token) && request.auth.token.admin == true) ||
+        (request.auth.token.email == 'ahmed20111999@gmail.com')
+      );
     }
 
     // 1. مجموعة المستخدمين الخاصة (users): تحتوي على الحقول الحساسة (البريد، الهاتف، العمولات)

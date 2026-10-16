@@ -260,20 +260,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       try {
-        // Check Custom Claims for admin verification
+        // Check Custom Claims or owner email for admin verification
         const idTokenResult = await firebaseUser.getIdTokenResult();
-        const hasAdminClaim = idTokenResult.claims.admin === true;
+        const hasAdminClaim = idTokenResult.claims.admin === true || firebaseUser.email === 'ahmed20111999@gmail.com';
 
         // Subscribe strictly to THIS user's private document: users/{uid}
         const userDocRef = doc(db, 'users', firebaseUser.uid);
 
         userDocUnsubscribe = onSnapshot(
           userDocRef,
-          (docSnap) => {
+          async (docSnap) => {
             if (docSnap.exists()) {
               const profile = { id: firebaseUser.uid, ...(docSnap.data() as Omit<User, 'id'>) };
 
-              if (profile.role === 'admin') {
+              if (profile.role === 'admin' || firebaseUser.email === 'ahmed20111999@gmail.com') {
                 if (hasAdminClaim) {
                   setCurrentUser(profile);
                   setCurrentScreen('screen-admin');
@@ -294,6 +294,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 setCurrentUser(null);
                 setCurrentScreen('screen-role-select');
               }
+            } else if (firebaseUser.email === 'ahmed20111999@gmail.com') {
+              // Auto initialize owner document
+              const adminData = {
+                name: 'المدير العام',
+                email: 'ahmed20111999@gmail.com',
+                phone: '0100000000',
+                role: 'admin' as UserRole,
+                commissionOwed: 0,
+                createdAt: new Date().toISOString(),
+              };
+              await setDoc(userDocRef, adminData, { merge: true });
+              setCurrentUser({ id: firebaseUser.uid, ...adminData });
+              setCurrentScreen('screen-admin');
             } else {
               console.warn('User private document does not exist in Firestore for UID:', firebaseUser.uid);
               setCurrentUser(null);
@@ -326,17 +339,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
       const uid = cred.user.uid;
 
-      // Handle Admin login: requires server-side Custom Claim AND matching Firestore profile
+      // Handle Admin login: requires server-side Custom Claim or owner email AND matching Firestore profile
       if (role === 'admin') {
         const idTokenResult = await cred.user.getIdTokenResult();
-        const hasAdminClaim = idTokenResult.claims.admin === true;
+        const hasAdminClaim = idTokenResult.claims.admin === true || cred.user.email === 'ahmed20111999@gmail.com';
 
         const userDocRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userDocRef);
 
         if (!hasAdminClaim || !userSnap.exists() || userSnap.data()?.role !== 'admin') {
+          if (cred.user.email === 'ahmed20111999@gmail.com') {
+            const adminData = {
+              name: 'المدير العام',
+              email: 'ahmed20111999@gmail.com',
+              phone: '0100000000',
+              role: 'admin' as UserRole,
+              commissionOwed: 0,
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(userDocRef, adminData, { merge: true });
+            const adminProfile = { id: uid, ...adminData };
+            setCurrentUser(adminProfile);
+            showToast('تم الدخول إلى لوحة الإدارة بنجاح');
+            setCurrentScreen('screen-admin');
+            return true;
+          }
+
           await signOut(auth);
-          showToast('صلاحيات الإدارة غير مهيأة على الخادم (Custom Claim أو ملف إداري مفقود). الدخول الإداري معطّل.', 'error');
+          showToast('صلاحيات الإدارة غير مهيأة على هذا الحساب.', 'error');
           return false;
         }
 
@@ -647,7 +677,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Error confirming pickup:', e);
-      showToast('فشل تأكيد الاستلام: ' + e.message, 'error');
+      if (e.message?.toLowerCase().includes('permission') || e.message?.includes('insufficient')) {
+        showToast('يرجى نشر قواعد (Firestore Rules) المحدثة في لوحة تحكم Firebase أولاً للسماح بالتأكيد.', 'error');
+      } else {
+        showToast('فشل تأكيد الاستلام: ' + e.message, 'error');
+      }
     }
   };
 
@@ -663,7 +697,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Error cancelling driver assignment:', e);
-      showToast('فشل إلغاء تعيين المندوب: ' + e.message, 'error');
+      if (e.message?.toLowerCase().includes('permission') || e.message?.includes('insufficient')) {
+        showToast('يرجى نشر قواعد (Firestore Rules) المحدثة في لوحة Firebase Console لإلغاء المندوب.', 'error');
+      } else {
+        showToast('فشل إلغاء تعيين المندوب: ' + e.message, 'error');
+      }
     }
   };
 
@@ -687,7 +725,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (err: unknown) {
       const e = err as Error;
       console.error('Error verifying pickup code:', e);
-      showToast('فشل التحقق من كود الاستلام: ' + e.message, 'error');
+      if (e.message?.toLowerCase().includes('permission') || e.message?.includes('insufficient')) {
+        showToast('يرجى نشر قواعد (Firestore Rules) المحدثة في لوحة تحكم Firebase أولاً للتحقق من الكود.', 'error');
+      } else {
+        showToast('فشل التحقق من كود الاستلام: ' + e.message, 'error');
+      }
       return false;
     }
   };
@@ -821,6 +863,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return publicProfiles.find((u) => u.id === id);
   };
 
+  const isOrderPickedUp = (order: Order): boolean => {
+    return order.pickedUp === true;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -852,6 +898,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         restConfirmPickup,
         restCancelAssignment,
         driverVerifyPickup,
+        isOrderPickedUp,
         rateDriver,
         driverAcceptOrder,
         driverCompleteOrder,
