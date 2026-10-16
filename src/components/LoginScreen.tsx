@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export const LoginScreen: React.FC = () => {
-  const { currentRoleSelecting, setCurrentScreen, login } = useApp();
+  const { currentRoleSelecting, setCurrentScreen, login, showToast } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,6 +20,27 @@ export const LoginScreen: React.FC = () => {
     setLoading(true);
     await login(email, password, role);
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      showToast('يرجى كتابة بريدك الإلكتروني أولاً في الحقل أعلاه لإرسال رابط الاستعادة.', 'error');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      showToast('تم إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني بنجاح! تفقد صندوق الوارد.');
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      console.error('Password reset error:', e);
+      if (e.code === 'auth/user-not-found') {
+        showToast('هذا البريد غير مسجل لدينا.', 'error');
+      } else if (e.code === 'auth/invalid-email') {
+        showToast('صيغة البريد الإلكتروني غير صحيحة.', 'error');
+      } else {
+        showToast('تعذر إرسال الرابط: ' + (e.message || 'خطأ غير معروف'), 'error');
+      }
+    }
   };
 
   return (
@@ -50,9 +73,18 @@ export const LoginScreen: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              كلمة المرور
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                كلمة المرور
+              </label>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs text-[#FF5722] hover:underline font-semibold"
+              >
+                نسيت كلمة المرور؟
+              </button>
+            </div>
             <input
               type="password"
               value={password}
