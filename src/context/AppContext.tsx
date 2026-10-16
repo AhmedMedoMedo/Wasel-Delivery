@@ -269,11 +269,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         userDocUnsubscribe = onSnapshot(
           userDocRef,
-          async (docSnap) => {
+          (docSnap) => {
             if (docSnap.exists()) {
               const profile = { id: firebaseUser.uid, ...(docSnap.data() as Omit<User, 'id'>) };
 
-              if (profile.role === 'admin' || firebaseUser.email === 'ahmed20111999@gmail.com') {
+              if (profile.role === 'admin') {
                 if (hasAdminClaim) {
                   setCurrentUser(profile);
                   setCurrentScreen('screen-admin');
@@ -294,19 +294,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 setCurrentUser(null);
                 setCurrentScreen('screen-role-select');
               }
-            } else if (firebaseUser.email === 'ahmed20111999@gmail.com') {
-              // Auto initialize owner document
-              const adminData = {
-                name: 'المدير العام',
-                email: 'ahmed20111999@gmail.com',
-                phone: '0100000000',
-                role: 'admin' as UserRole,
-                commissionOwed: 0,
-                createdAt: new Date().toISOString(),
-              };
-              await setDoc(userDocRef, adminData, { merge: true });
-              setCurrentUser({ id: firebaseUser.uid, ...adminData });
-              setCurrentScreen('screen-admin');
             } else {
               console.warn('User private document does not exist in Firestore for UID:', firebaseUser.uid);
               setCurrentUser(null);
@@ -339,38 +326,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
       const uid = cred.user.uid;
 
-      // Handle Admin login: requires server-side Custom Claim or owner email AND matching Firestore profile
+      // Handle Admin login: requires server-side Custom Claim or owner email
       if (role === 'admin') {
         const idTokenResult = await cred.user.getIdTokenResult();
-        const hasAdminClaim = idTokenResult.claims.admin === true || cred.user.email === 'ahmed20111999@gmail.com';
+        const isOwnerEmail = cred.user.email === 'ahmed20111999@gmail.com';
+        const hasAdminClaim = idTokenResult.claims.admin === true || isOwnerEmail;
 
         const userDocRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userDocRef);
+        const docRole = userSnap.exists() ? userSnap.data()?.role : null;
 
-        if (!hasAdminClaim || !userSnap.exists() || userSnap.data()?.role !== 'admin') {
-          if (cred.user.email === 'ahmed20111999@gmail.com') {
-            const adminData = {
-              name: 'المدير العام',
-              email: 'ahmed20111999@gmail.com',
-              phone: '0100000000',
-              role: 'admin' as UserRole,
-              commissionOwed: 0,
-              createdAt: new Date().toISOString(),
-            };
-            await setDoc(userDocRef, adminData, { merge: true });
-            const adminProfile = { id: uid, ...adminData };
-            setCurrentUser(adminProfile);
-            showToast('تم الدخول إلى لوحة الإدارة بنجاح');
-            setCurrentScreen('screen-admin');
-            return true;
-          }
-
+        if (!hasAdminClaim || (!isOwnerEmail && docRole !== 'admin')) {
           await signOut(auth);
           showToast('صلاحيات الإدارة غير مهيأة على هذا الحساب.', 'error');
           return false;
         }
 
-        const adminProfile = { id: uid, ...(userSnap.data() as Omit<User, 'id'>) };
+        const data = userSnap.exists() ? userSnap.data() : null;
+        const adminProfile: User = {
+          id: uid,
+          name: data?.name || 'المدير العام',
+          email: cred.user.email || 'ahmed20111999@gmail.com',
+          phone: data?.phone || '',
+          role: 'admin',
+          commissionOwed: data?.commissionOwed || 0,
+        };
         setCurrentUser(adminProfile);
         showToast('تم الدخول إلى لوحة الإدارة بنجاح');
         setCurrentScreen('screen-admin');
